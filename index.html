@@ -82,10 +82,14 @@ body{background:#f0f2f5;color:#1a1a1a;min-height:100vh}
 <div id="loading" class="loading hidden">جاري التحميل...</div>
 
 <script>
-// --- إعدادات Supabase ---
 const supabaseUrl = 'https://mbukheyuiuiadjkchhrs.supabase.co';
 const supabaseKey = 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+let supabase = null;
+try {
+    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+} catch(e) {
+    console.error("Supabase init error:", e);
+}
 
 let DB = {
     generator: {name:'مولدة النور', pricePerAmp:5000, superQiNumber:'07701234567', phone:'07701234567', status:false, startTime:null},
@@ -103,8 +107,8 @@ function fmtDate(d){return new Date(d).toLocaleDateString('ar-IQ')}
 function isToday(ts){const d=new Date(ts),t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate()}
 function isSameMonth(ts){const d=new Date(ts),t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()}
 
-// --- تحميل البيانات من السحابة ---
 async function syncData() {
+    if(!supabase) return;
     showLoad();
     try {
         const [s, p, e, c] = await Promise.all([
@@ -113,12 +117,13 @@ async function syncData() {
             supabase.from('expenses').select('*'),
             supabase.from('complaints').select('*')
         ]);
+        if (s.error) throw s.error;
         DB.subscribers = s.data || [];
         DB.payments = p.data || [];
         DB.expenses = e.data || [];
         DB.complaints = c.data || [];
     } catch (err) {
-        alert('خطأ في الاتصال بقاعدة البيانات: ' + err.message);
+        alert('⚠️ خطأ في قاعدة البيانات: ' + err.message);
     }
     hideLoad();
 }
@@ -127,10 +132,12 @@ async function login(role){
   session.role=role;
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  await syncData();
   const first={owner:'owner-home',collector:'collector-today',citizen:'citizen-gen',admin:'admin-gens'};
   go(first[role]);
+  await syncData();
+  go(session.currentPanel); 
 }
+
 function logout(){
   session={role:null,currentPanel:null};
   document.getElementById('app').classList.add('hidden');
@@ -138,10 +145,10 @@ function logout(){
 }
 
 const NAVS={
-  owner:[{id:'owner-home',icon:'🏠',label:'الرئيسية'},{id:'owner-subs',icon:'👥',label:'المشتركين'},{id:'owner-collect',icon:'💵',label:'التحصيل'},{id:'owner-exp',icon:'🧾',label:'المصاريف'},{id:'owner-report',icon:'📊',label:'التقرير'},{id:'owner-settings',icon:'⚙️',label:'الإعدادات'}],
-  collector:[{id:'collector-today',icon:'🚶',label:'جولة اليوم'},{id:'collector-log',icon:'📋',label:'سجل اليوم'}],
-  citizen:[{id:'citizen-gen',icon:'⚡',label:'المولدة'},{id:'citizen-invoice',icon:'🧾',label:'فاتورتي'},{id:'citizen-receipts',icon:'📃',label:'إيصالاتي'},{id:'citizen-complaint',icon:'📢',label:'شكوى'}],
-  admin:[{id:'admin-gens',icon:'🏭',label:'المولدات'},{id:'admin-rev',icon:'💰',label:'الإيرادات'},{id:'admin-support',icon:'🎫',label:'الدعم'}]
+  owner:[{id:'owner-home',icon:'🏠',label:'الرئيسية'},{id:'owner-subs',icon:'👥',label:'المشتركين'},{id:'owner-collect',icon:'💵',label:'التحصيل'}],
+  collector:[{id:'collector-today',icon:'🚶',label:'جولة اليوم'}],
+  citizen:[{id:'citizen-gen',icon:'⚡',label:'المولدة'},{id:'citizen-invoice',icon:'🧾',label:'فاتورتي'}],
+  admin:[{id:'admin-gens',icon:'🏭',label:'المولدات'}]
 };
 
 function go(panelId){
@@ -167,8 +174,6 @@ function isSubPendingThisMonth(subId){return DB.payments.some(p=>p.sub_id===subI
 function getUnpaidSubs(){return DB.subscribers.filter(s=>!isSubPaidThisMonth(s.id))}
 function totalCollectedToday(){return DB.payments.filter(p=>isToday(p.date)&&p.status==='paid').reduce((s,p)=>s+Number(p.amount),0)}
 function totalCollectedMonth(){return DB.payments.filter(p=>isSameMonth(p.date)&&p.status==='paid').reduce((s,p)=>s+Number(p.amount),0)}
-function totalPending(){return DB.payments.filter(p=>isSameMonth(p.date)&&p.status==='pending').reduce((s,p)=>s+Number(p.amount),0)}
-function totalExpensesMonth(){return DB.expenses.filter(e=>isSameMonth(e.date)).reduce((s,e)=>s+Number(e.amount),0)}
 
 const RENDERERS={};
 
@@ -179,15 +184,14 @@ RENDERERS['owner-home']=()=>{
   const paidCount=totalSubs-unpaid.length;
   return `
     <div class="card">
-      <button class="toggle ${g.status?'on':'off'}" onclick="toggleGenerator()">${g.status?'⚡ المولدة شغالة — اضغط للإطفاء':'🔴 المولدة مطفية — اضغط للتشغيل'}</button>
+      <button class="toggle ${g.status?'on':'off'}" onclick="toggleGenerator()">${g.status?'⚡ المولدة شغالة':'🔴 المولدة مطفية'}</button>
     </div>
-    <div class="card"><h3>💰 اليوم</h3><div class="stat">${fmt(totalCollectedToday())}</div><div style="color:var(--gray);font-size:13px;margin-top:4px">المحصّل اليوم</div></div>
+    <div class="card"><h3>💰 اليوم</h3><div class="stat">${fmt(totalCollectedToday())}</div></div>
     <div class="card"><h3>👥 المشتركين</h3>
       <div class="row"><span>المسددين</span><b style="color:var(--success)">${paidCount}</b></div>
       <div class="row"><span>المتأخرين</span><b style="color:var(--danger)">${unpaid.length}</b></div>
       <div class="row"><span>المجموع</span><b>${totalSubs}</b></div>
     </div>
-    ${totalPending()>0?`<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b style="color:#92400e">⏳ يوجد ${fmt(totalPending())} بانتظار التأكيد</b><div style="margin-top:8px"><button class="btn sm" onclick="go('owner-collect')">راجع التحصيل</button></div></div>`:''}
   `;
 };
 function toggleGenerator(){ DB.generator.status = !DB.generator.status; go('owner-home'); }
@@ -203,7 +207,7 @@ function renderSubsList(subs){
     const status=paid?'<span class="status-pill on">✅ مسدد</span>':pending?'<span class="status-pill pending">⏳ بانتظار</span>':'<span class="status-pill off">❌ متأخر</span>';
     return `<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
-        <div><b style="font-size:16px">${s.name}</b><div style="color:var(--gray);font-size:13px;margin-top:2px">${s.amps} أمبير · ${s.phone}</div></div>
+        <div><b style="font-size:16px">${s.name}</b><div style="color:var(--gray);font-size:13px;margin-top:2px">${s.amps} أمبير</div></div>
         ${status}
       </div>
       <div class="row"><span>المبلغ الشهري</span><b>${fmt(calcMonthly(s))}</b></div>
@@ -218,17 +222,15 @@ function addSubForm(){
   openModal(`<h3>➕ إضافة مشترك</h3>
     <label class="label">الاسم</label><input class="input" id="subName" placeholder="اسم المشترك">
     <label class="label">عدد الأمبير</label><input class="input" id="subAmps" type="number" value="5">
-    <label class="label">رقم الموبايل</label><input class="input" id="subPhone" placeholder="07XXXXXXXXX">
     <button class="btn block" onclick="saveSub()">حفظ</button>
     <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
 }
 async function saveSub(){
   const name=document.getElementById('subName').value.trim();
   const amps=Number(document.getElementById('subAmps').value);
-  const phone=document.getElementById('subPhone').value.trim();
   if(!name||!amps){alert('أدخل الاسم والأمبير');return}
   showLoad(); closeModal();
-  await supabase.from('subscribers').insert([{name, amps, phone}]);
+  await supabase.from('subscribers').insert([{name, amps, phone:'-'}]);
   await syncData(); go('owner-subs'); alert('✅ تم الحفظ في السحابة');
 }
 async function deleteSub(id){
@@ -245,76 +247,12 @@ async function markPaid(subId,method){
 
 RENDERERS['owner-collect']=()=>{
   const unpaid=getUnpaidSubs().filter(s=>!isSubPendingThisMonth(s.id));
-  const pending=DB.payments.filter(p=>isSameMonth(p.date)&&p.status==='pending');
   return `
-    <div class="card"><h3>⏳ بانتظار التأكيد</h3>
-      ${pending.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':pending.map(p=>{
-        const sub=DB.subscribers.find(s=>s.id===p.sub_id);
-        return `<div class="row"><span>${sub?sub.name:'؟'}</span><span>${fmt(p.amount)}</span><button class="btn sm success" onclick="confirmPending('${p.id}')">تأكيد</button></div>`;
-      }).join('')}
-    </div>
     <div class="card"><h3>❌ لم يدفعوا (${unpaid.length})</h3>
       ${unpaid.length===0?'<div style="color:var(--gray);font-size:13px">كلهم دفعوا 🎉</div>':unpaid.map(s=>`<div class="row"><span>${s.name}</span><span>${fmt(calcMonthly(s))}</span><button class="btn sm success" onclick="markPaid('${s.id}','cash')">استلمت</button></div>`).join('')}
     </div>
   `;
 };
-async function confirmPending(id){
-  showLoad(); await supabase.from('payments').update({status: 'paid'}).eq('id', id);
-  await syncData(); go('owner-collect');
-}
-
-RENDERERS['owner-exp']=()=>{
-  const monthExp=DB.expenses.filter(e=>isSameMonth(e.date));
-  return `<button class="btn block" style="margin-bottom:12px" onclick="addExpenseForm()">+ إضافة مصروف</button>
-    <div class="card"><h3>مصاريف هذا الشهر</h3><div class="stat">${fmt(monthExp.reduce((s,e)=>s+Number(e.amount),0))}</div></div>
-    <div class="card"><h3>📋 السجل</h3>
-      ${monthExp.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':monthExp.map(e=>`<div class="row"><div><b>${e.type}</b><div style="font-size:12px;color:var(--gray)">${fmtDate(e.date)}</div></div><b style="color:var(--danger)">${fmt(e.amount)}</b></div>`).join('')}
-    </div>`;
-};
-function addExpenseForm(){
-  openModal(`<h3>➕ مصروف جديد</h3>
-    <label class="label">النوع</label><select class="input" id="expType"><option>وقود</option><option>زيت</option><option>صيانة</option><option>أجور</option><option>أخرى</option></select>
-    <label class="label">المبلغ</label><input class="input" id="expAmount" type="number" placeholder="0">
-    <button class="btn block" onclick="saveExpense()">حفظ</button>
-    <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
-}
-async function saveExpense(){
-  const type=document.getElementById('expType').value;
-  const amount=Number(document.getElementById('expAmount').value);
-  if(!amount){alert('أدخل المبلغ');return}
-  showLoad(); closeModal();
-  await supabase.from('expenses').insert([{type, amount}]);
-  await syncData(); go('owner-exp');
-}
-
-RENDERERS['owner-report']=()=>{
-  const income=totalCollectedMonth(),expenses=totalExpensesMonth(),net=income-expenses;
-  return `<div class="card"><h3>📊 تقرير الشهر</h3>
-    <div class="row"><span>الدخل</span><b style="color:var(--success)">${fmt(income)}</b></div>
-    <div class="row"><span>المصاريف</span><b style="color:var(--danger)">${fmt(expenses)}</b></div>
-    <div class="row" style="font-size:17px;padding-top:14px;border-top:2px solid var(--border);margin-top:10px"><span><b>الصافي</b></span><b style="color:${net>=0?'var(--success)':'var(--danger)'}">${fmt(net)}</b></div>
-    </div>`;
-};
-
-RENDERERS['owner-settings']=()=>{
-  const g=DB.generator;
-  const qrUrl=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('mawaldi://gen/'+g.superQiNumber)}`;
-  return `<div class="card"><h3>⚙️ بيانات المولدة</h3>
-    <label class="label">اسم المولدة</label><input class="input" id="setName" value="${g.name}">
-    <label class="label">سعر الأمبير</label><input class="input" id="setPrice" type="number" value="${g.pricePerAmp}">
-    <label class="label">رقم سوبر كيو</label><input class="input" id="setSuperQi" value="${g.superQiNumber}">
-    <button class="btn block" onclick="saveSettings()">حفظ</button>
-    </div>
-    <div class="card"><h3>📱 QR للمواطنين</h3>
-      <div class="qr-box"><img src="${qrUrl}" style="border-radius:8px"></div>
-    </div>`;
-};
-function saveSettings(){
-  DB.generator.name=document.getElementById('setName').value.trim();
-  DB.generator.pricePerAmp=Number(document.getElementById('setPrice').value)||0;
-  DB.generator.superQiNumber=document.getElementById('setSuperQi').value.trim();
-  alert('✅ تم الحفظ محلياً للديمو'); go('owner-settings');
-}
 
 RENDERERS['collector-today']=()=>{
   const unpaid=DB.subscribers.filter(s=>!isSubPaidThisMonth(s.id)&&!isSubPendingThisMonth(s.id));
@@ -330,7 +268,7 @@ RENDERERS['citizen-gen']=()=>{
 };
 
 RENDERERS['citizen-invoice']=()=>{
-  const sub=DB.subscribers[0]; // في الواقع الحقيقي نربط حساب المواطن برقمه، هنا نأخذ أول واحد للديمو
+  const sub=DB.subscribers[0]; 
   if(!sub)return '<div class="empty">لا يوجد حساب مشترك مسجل</div>';
   const amount=calcMonthly(sub);
   const paid=isSubPaidThisMonth(sub.id);
@@ -339,14 +277,12 @@ RENDERERS['citizen-invoice']=()=>{
       <div><div style="font-size:13px;color:var(--gray)">المبلغ المطلوب</div><div class="stat">${fmt(amount)}</div></div>
       ${paid?'<span class="status-pill on">✅ مسدد</span>':'<span class="status-pill off">❌ غير مسدد</span>'}
     </div>
-    <div class="row"><span>الأمبير</span><b>${sub.amps}</b></div>
     </div>
     ${!paid?`<button class="btn block" onclick="payOnline('${sub.id}')">💳 ادفع الآن (سوبر كيو)</button>`:''}`;
 };
 function payOnline(subId){
-  const amount=calcMonthly(DB.subscribers.find(s=>s.id===subId));
   openModal(`<h3>💳 الدفع عبر سوبر كيو</h3>
-    <div class="qr-box"><div>حوّل إلى: ${DB.generator.superQiNumber}</div><div class="num">${fmt(amount)}</div></div>
+    <div class="qr-box"><div>حوّل إلى: ${DB.generator.superQiNumber}</div></div>
     <button class="btn block success" onclick="markPending('${subId}')">✅ حوّلت المبلغ</button>
     <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
 }
@@ -362,13 +298,6 @@ RENDERERS['admin-gens']=()=>`
   <div class="card"><h3>📊 إحصائيات</h3>
     <div class="row"><span>المشتركين</span><b>${DB.subscribers.length}</b></div>
   </div>`;
-
-RENDERERS['citizen-receipts']=()=>'<div class="empty">قيد التطوير</div>';
-RENDERERS['citizen-complaint']=()=>'<div class="empty">قيد التطوير</div>';
-RENDERERS['collector-log']=()=>'<div class="empty">قيد التطوير</div>';
-RENDERERS['admin-rev']=()=>'<div class="empty">قيد التطوير</div>';
-RENDERERS['admin-support']=()=>'<div class="empty">قيد التطوير</div>';
-
 </script>
 </body>
 </html>

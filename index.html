@@ -1,39 +1,124 @@
 <!DOCTYPE html>
-<html dir="rtl">
+<html dir="rtl" lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختبار الاتصال</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مولدتي</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif}
+body{background:#f0f2f5;color:#1a1a1a}
+.hidden{display:none!important}
+.login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#f59e0b;padding:20px}
+.login h1{color:#fff;font-size:32px;margin-bottom:20px}
+.btn-role{width:100%;max-width:300px;padding:15px;margin:8px;background:#fff;border:none;border-radius:10px;font-size:18px;font-weight:bold;cursor:pointer}
+.app{max-width:500px;margin:0 auto;min-height:100vh;background:#f0f2f5;padding-bottom:80px}
+.header{background:#f59e0b;color:#fff;padding:15px;display:flex;justify-content:space-between;align-items:center}
+.content{padding:15px}
+.card{background:#fff;padding:15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 5px rgba(0,0,0,0.05)}
+.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eee}
+.row:last-child{border:none}
+.btn{background:#f59e0b;color:#fff;border:none;padding:10px 15px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:bold}
+.btn.success{background:#10b981}
+.btn.danger{background:#ef4444}
+.btn.block{width:100%;margin-top:10px}
+.input{width:100%;padding:12px;border:1px solid #ccc;border-radius:8px;margin-bottom:10px}
+.toggle{width:100%;padding:20px;border:none;border-radius:10px;font-size:20px;font-weight:bold;color:#fff;cursor:pointer;margin-bottom:15px}
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:#fff;padding:20px;border-radius:15px;width:100%;max-width:400px}
+</style>
 </head>
-<body style="font-family: sans-serif; padding: 20px; text-align: center;">
-    <h2>اختبار قاعدة البيانات</h2>
-    <div id="result" style="font-size: 18px; margin-top: 20px; font-weight: bold;">جاري الاتصال...</div>
+<body>
 
-    <script>
-        // نضع الكود في try/catch لأمسك أي خطأ
-        try {
-            const supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-            
-            // دالة تجيب البيانات من الجدول
-            async function testDB() {
-                const { data, error } = await supabase.from('subscribers').select('*');
-                const resDiv = document.getElementById('result');
-                
-                if (error) {
-                    resDiv.innerHTML = '❌ فشل الاتصال: <br>' + error.message;
-                    resDiv.style.color = 'red';
-                } else {
-                    resDiv.innerHTML = '✅ نجح الاتصال! <br> عدد المشتركين: ' + data.length;
-                    resDiv.style.color = 'green';
-                }
-            }
-            
-            testDB();
-        } catch (e) {
-            document.getElementById('result').innerHTML = '❌ خطأ برمجي: ' + e.message;
-            document.getElementById('result').style.color = 'red';
-        }
-    </script>
+<div id="login" class="login">
+  <h1>⚡ مولدتي</h1>
+  <button class="btn-role" onclick="login('owner')">⚡ أبو المولدة</button>
+  <button class="btn-role" onclick="login('citizen')">👤 المواطن</button>
+</div>
+
+<div id="app" class="app hidden">
+  <div class="header">
+    <h2 id="headerTitle">الرئيسية</h2>
+    <button class="btn danger" onclick="logout()">خروج</button>
+  </div>
+  <div id="content" class="content"></div>
+</div>
+
+<div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<script>
+const supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+let DB = { subscribers: [], payments: [], status: false };
+let session = { role: null };
+
+function fmt(n){return Number(n||0).toLocaleString()+' د.ع'}
+
+async function syncData() {
+    const [s, p] = await Promise.all([ supabase.from('subscribers').select('*'), supabase.from('payments').select('*') ]);
+    if (s.data) DB.subscribers = s.data;
+    if (p.data) DB.payments = p.data;
+}
+
+async function login(role){
+  session.role = role;
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  await syncData();
+  go(role === 'owner' ? 'owner-home' : 'citizen-home');
+}
+
+function logout(){
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+}
+
+function go(panel){
+  const c = document.getElementById('content');
+  document.getElementById('headerTitle').innerText = panel === 'owner-home' ? 'الرئيسية' : 'لوحة المواطن';
+  
+  if(panel === 'owner-home') {
+    c.innerHTML = `
+      <button class="toggle" style="background:${DB.status?'#10b981':'#ef4444'}" onclick="DB.status=!DB.status;go('owner-home')">${DB.status?'⚡ المولدة شغالة':'🔴 المولدة مطفية'}</button>
+      <div class="card"><h3>المشتركين (${DB.subscribers.length})</h3>
+        <button class="btn block" onclick="addSubForm()">+ إضافة مشترك</button>
+        ${DB.subscribers.map(s => `<div class="row"><span>${s.name} (${s.amps} أمبير)</span> <b>${fmt(s.amps*5000)}</b></div>`).join('')}
+      </div>
+    `;
+  } else if (panel === 'citizen-home') {
+    c.innerHTML = `
+      <div class="card" style="text-align:center">
+        <h1 style="font-size:50px">${DB.status?'⚡':'🔴'}</h1>
+        <h2 style="color:${DB.status?'#10b981':'#ef4444'}">${DB.status?'المولدة شغالة':'المولدة مطفية'}</h2>
+      </div>
+    `;
+  }
+}
+
+function addSubForm(){
+  document.getElementById('modalBox').innerHTML = `
+    <h3>إضافة مشترك</h3>
+    <input class="input" id="sName" placeholder="الاسم">
+    <input class="input" id="sAmps" type="number" value="5" placeholder="الأمبير">
+    <button class="btn success block" onclick="saveSub()">حفظ</button>
+    <button class="btn danger block" onclick="closeModal()">إلغاء</button>
+  `;
+  document.getElementById('modal').classList.remove('hidden');
+}
+
+async function saveSub(){
+  const name = document.getElementById('sName').value;
+  const amps = document.getElementById('sAmps').value;
+  if(!name) return alert('اكتب الاسم');
+  await supabase.from('subscribers').insert([{name, amps, phone:'-'}]);
+  closeModal();
+  await syncData();
+  go('owner-home');
+  alert('تم الحفظ بنجاح!');
+}
+
+function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
+</script>
 </body>
 </html>

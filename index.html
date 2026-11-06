@@ -29,13 +29,11 @@ body{background:#f0f2f5;color:#1a1a1a}
 </style>
 </head>
 <body>
-
 <div id="login" class="login">
   <h1>⚡ مولدتي</h1>
   <button class="btn-role" onclick="login('owner')">⚡ أبو المولدة</button>
   <button class="btn-role" onclick="login('citizen')">👤 المواطن</button>
 </div>
-
 <div id="app" class="app hidden">
   <div class="header">
     <h2 id="headerTitle">الرئيسية</h2>
@@ -43,26 +41,20 @@ body{background:#f0f2f5;color:#1a1a1a}
   </div>
   <div id="content" class="content"></div>
 </div>
-
 <div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()">
   <div class="modal-box" id="modalBox"></div>
 </div>
-
 <script>
 const supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-let DB = { subscribers: [], payments: [], status: false };
-let session = { role: null };
-
+let DB = { subscribers: [], status: false };
 function fmt(n){return Number(n||0).toLocaleString()+' د.ع'}
 
 async function syncData() {
-    const [s, p] = await Promise.all([ supabase.from('subscribers').select('*'), supabase.from('payments').select('*') ]);
+    const s = await supabase.from('subscribers').select('*');
     if (s.data) DB.subscribers = s.data;
-    if (p.data) DB.payments = p.data;
 }
 
 async function login(role){
-  session.role = role;
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   await syncData();
@@ -86,7 +78,7 @@ function go(panel){
         ${DB.subscribers.map(s => `<div class="row"><span>${s.name} (${s.amps} أمبير)</span> <b>${fmt(s.amps*5000)}</b></div>`).join('')}
       </div>
     `;
-  } else if (panel === 'citizen-home') {
+  } else {
     c.innerHTML = `
       <div class="card" style="text-align:center">
         <h1 style="font-size:50px">${DB.status?'⚡':'🔴'}</h1>
@@ -115,7 +107,7 @@ async function saveSub(){
   closeModal();
   await syncData();
   go('owner-home');
-  alert('تم الحفظ بنجاح!');
+  alert('تم الحفظ في السحابة بنجاح!');
 }
 
 function closeModal(){ document.getElementById('modal').classList.add('hidden'); }

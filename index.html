@@ -3,224 +3,69 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مولدتي - نسخة الفحص</title>
+<title>مولدتي</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Segoe UI',Tahoma,sans-serif}
-body{background:#f0f2f5;color:#1a1a1a;min-height:100vh}
-:root{--primary:#f59e0b;--primary-dark:#d97706;--success:#10b981;--danger:#ef4444;--gray:#6b7280;--border:#e5e7eb;--bg:#f0f2f5}
-.hidden{display:none!important}
-.login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:linear-gradient(135deg,#f59e0b,#d97706)}
-.login h1{color:#fff;font-size:32px;margin-bottom:8px}
-.login p{color:#fff;opacity:.9;margin-bottom:40px}
-.role-btn{width:100%;max-width:340px;padding:20px;margin:8px 0;background:#fff;border:none;border-radius:16px;font-size:18px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;transition:transform .1s}
-.role-btn:active{transform:scale(.98)}
-.role-btn span{font-size:28px}
-.app{max-width:500px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
-.header{background:var(--primary);color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
-.header h2{font-size:18px}
-.header button{background:rgba(255,255,255,.2);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer}
-.content{flex:1;padding:16px;padding-bottom:90px}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:#fff;display:flex;border-top:1px solid var(--border);z-index:10}
-.nav-btn{flex:1;padding:10px 4px;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--gray);font-size:11px;font-weight:600}
-.nav-btn.active{color:var(--primary)}
-.nav-btn .ico{font-size:22px}
-.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.card h3{font-size:15px;margin-bottom:12px;color:var(--gray);font-weight:500}
-.stat{font-size:26px;font-weight:700;color:var(--primary-dark)}
-.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;gap:8px}
-.row:last-child{border:none}
-.btn{padding:10px 16px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:var(--primary);color:#fff}
-.btn.success{background:var(--success)}
-.btn.danger{background:var(--danger)}
-.btn.ghost{background:#f3f4f6;color:var(--gray)}
-.btn.block{width:100%}
-.btn.sm{padding:6px 12px;font-size:12px}
-.input{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:10px;font-family:inherit}
-.label{display:block;font-size:13px;color:var(--gray);margin-bottom:6px}
-.status-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap}
-.on{background:#d1fae5;color:#065f46}
-.off{background:#fee2e2;color:#991b1b}
-.toggle{width:100%;padding:20px;border:none;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer;margin-bottom:12px}
-.toggle.on{background:var(--success);color:#fff}
-.toggle.off{background:var(--danger);color:#fff}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:100}
-.modal-box{background:#fff;width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:20px;max-height:90vh;overflow-y:auto}
-.modal-box h3{margin-bottom:16px;font-size:18px}
-.modal-close{background:var(--gray);color:#fff;border:none;padding:10px;border-radius:10px;width:100%;margin-top:10px;cursor:pointer}
-.empty{text-align:center;padding:40px 20px;color:var(--gray);font-size:14px}
-.loading{position:fixed;inset:0;background:rgba(255,255,255,.8);display:flex;align-items:center;justify-content:center;z-index:999;font-size:20px;font-weight:bold;color:var(--primary)}
+  body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; text-align: center; }
+  .box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+  button { padding: 10px; background: #f59e0b; color: white; border: none; border-radius: 5px; width: 100%; margin-top: 10px; cursor: pointer; font-weight:bold;}
+  input { padding: 10px; width: 90%; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
+  .hidden { display: none; }
 </style>
 </head>
 <body>
-
-<script>
-// هذا الكود يمسك أي خطأ ويطلع لك رسالة
-window.onerror = function(msg, url, line, col, error) {
-    alert('⚠️ صار خطأ بالكود:\n' + msg + '\nالسطر: ' + line);
-    return false;
-};
-</script>
-
-<div id="login" class="login">
-  <h1>⚡ مولدتي</h1>
-  <p style="background:white; color:#d97706; padding:5px 15px; border-radius:20px; font-weight:bold; margin-bottom:20px;">نسخة الفحص 3.0</p>
-  <button class="role-btn" onclick="login('owner')"><span>⚡</span> أبو المولدة</button>
-  <button class="role-btn" onclick="login('collector')"><span>💰</span> الجابي</button>
-  <button class="role-btn" onclick="login('citizen')"><span>👤</span> المواطن</button>
-  <button class="role-btn" onclick="login('admin')"><span>⚙️</span> مدير المنصة</button>
-</div>
-
-<div id="app" class="app hidden">
-  <div class="header">
-    <h2 id="headerTitle">الرئيسية</h2>
-    <button onclick="logout()">خروج</button>
+  <div id="loginScreen" class="box">
+    <h1>⚡ مولدتي</h1>
+    <p>الإصدار النظيف</p>
+    <button onclick="login()">دخول أبو المولدة</button>
   </div>
-  <div id="content" class="content"></div>
-  <div id="nav" class="bottom-nav"></div>
-</div>
+  <div id="appScreen" class="box hidden">
+    <h2>لوحة أبو المولدة</h2>
+    <button onclick="toggleStatus()" id="statusBtn">🔴 المولدة مطفية</button>
+    <hr>
+    <h3>إضافة مشترك</h3>
+    <input type="text" id="name" placeholder="اسم المشترك">
+    <input type="number" id="amps" placeholder="عدد الأمبير" value="5">
+    <button onclick="addSub()">حفظ في السحابة</button>
+    <hr>
+    <h3>المشتركين</h3>
+    <div id="subsList">جاري التحميل...</div>
+  </div>
+  <script>
+    const supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+    let isOn = false;
 
-<div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()">
-  <div class="modal-box" id="modalBox"></div>
-</div>
+    function login() {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('appScreen').classList.remove('hidden');
+      loadSubs();
+    }
 
-<div id="loading" class="loading hidden">جاري التحميل...</div>
+    function toggleStatus() {
+      isOn = !isOn;
+      document.getElementById('statusBtn').innerText = isOn ? '⚡ المولدة شغالة' : '🔴 المولدة مطفية';
+      document.getElementById('statusBtn').style.background = isOn ? '#10b981' : '#ef4444';
+    }
 
-<script>
-const supabaseUrl = 'https://mbukheyuiuiadjkchhrs.supabase.co';
-const supabaseKey = 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ';
-let supabase = null;
-try { supabase = window.supabase.createClient(supabaseUrl, supabaseKey); } catch(e) { alert('فشل الاتصال بالسحابة'); }
+    async function addSub() {
+      const name = document.getElementById('name').value;
+      const amps = document.getElementById('amps').value;
+      if(!name || !amps) return alert('املأ البيانات');
+      const { error } = await supabase.from('subscribers').insert([{name: name, amps: amps, phone: '-'}]);
+      if(error) return alert('خطأ: ' + error.message);
+      document.getElementById('name').value = '';
+      loadSubs();
+      alert('✅ تم الحفظ!');
+    }
 
-let DB = {
-    generator: {name:'مولدة النور', pricePerAmp:5000, superQiNumber:'07701234567', status:false},
-    subscribers: [],
-    payments: []
-};
-let session={role:null,currentPanel:null};
-
-function showLoad(){document.getElementById('loading').classList.remove('hidden')}
-function hideLoad(){document.getElementById('loading').classList.add('hidden')}
-function fmt(n){return Number(n||0).toLocaleString('en-US')+' د.ع'}
-
-async function syncData() {
-    if(!supabase) return;
-    showLoad();
-    try {
-        const [s, p] = await Promise.all([
-            supabase.from('subscribers').select('*'),
-            supabase.from('payments').select('*')
-        ]);
-        if (s.data) DB.subscribers = s.data;
-        if (p.data) DB.payments = p.data;
-    } catch (err) { alert('خطأ في جلب البيانات: ' + err.message); }
-    hideLoad();
-}
-
-async function login(role){
-  session.role=role;
-  document.getElementById('login').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
-  const first={owner:'owner-home',collector:'collector-today',citizen:'citizen-gen',admin:'admin-gens'};
-  go(first[role]);
-  await syncData();
-  go(session.currentPanel); 
-}
-
-function logout(){
-  session={role:null,currentPanel:null};
-  document.getElementById('app').classList.add('hidden');
-  document.getElementById('login').classList.remove('hidden');
-}
-
-const NAVS={
-  owner:[{id:'owner-home',icon:'🏠',label:'الرئيسية'},{id:'owner-subs',icon:'👥',label:'المشتركين'},{id:'owner-collect',icon:'💵',label:'التحصيل'}],
-  collector:[{id:'collector-today',icon:'🚶',label:'جولة اليوم'}],
-  citizen:[{id:'citizen-gen',icon:'⚡',label:'المولدة'},{id:'citizen-invoice',icon:'🧾',label:'فاتورتي'}],
-  admin:[{id:'admin-gens',icon:'🏭',label:'المولدات'}]
-};
-
-function go(panelId){
-  session.currentPanel=panelId;
-  renderNav();
-  if(RENDERERS[panelId]) {
-    document.getElementById('content').innerHTML=RENDERERS[panelId]();
-    const title=(NAVS[session.role].find(n=>n.id===panelId)||{}).label||'';
-    document.getElementById('headerTitle').textContent=title;
-  }
-}
-function renderNav(){
-  const navs=NAVS[session.role]||[];
-  document.getElementById('nav').innerHTML=navs.map(n=>`<button class="nav-btn ${session.currentPanel===n.id?'active':''}" onclick="go('${n.id}')"><span class="ico">${n.icon}</span><span>${n.label}</span></button>`).join('');
-}
-
-function openModal(html){
-    const m = document.getElementById('modal');
-    const b = document.getElementById('modalBox');
-    if(!m || !b) { alert('❌ خطأ فني: نافذة المودال غير موجودة!'); return; }
-    b.innerHTML = html;
-    m.classList.remove('hidden');
-}
-function closeModal(){document.getElementById('modal').classList.add('hidden')}
-
-function calcMonthly(sub){return sub.amps*DB.generator.pricePerAmp}
-
-const RENDERERS={};
-
-RENDERERS['owner-home']=()=>`
-    <div class="card"><button class="toggle ${DB.generator.status?'on':'off'}" onclick="DB.generator.status=!DB.generator.status;go('owner-home')">${DB.generator.status?'⚡ المولدة شغالة':'🔴 المولدة مطفية'}</button></div>
-    <div class="card"><h3>👥 المشتركين</h3><div class="row"><span>المجموع</span><b>${DB.subscribers.length}</b></div></div>
-`;
-
-RENDERERS['owner-subs']=()=>`
-  <button class="btn block" style="margin-bottom:12px" onclick="alert('الزر يشتغل!'); addSubForm()">+ إضافة مشترك</button>
-  ${DB.subscribers.length===0?'<div class="empty">لا يوجد مشتركون</div>':DB.subscribers.map(s=>`
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
-        <div><b style="font-size:16px">${s.name}</b><div style="color:var(--gray);font-size:13px;margin-top:2px">${s.amps} أمبير</div></div>
-      </div>
-      <div class="row"><span>المبلغ الشهري</span><b>${fmt(calcMonthly(s))}</b></div>
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button class="btn sm success" onclick="markPaid('${s.id}')">استلمت كاش</button>
-      </div>
-    </div>`).join('')}
-`;
-
-function addSubForm(){
-  openModal(`<h3>➕ إضافة مشترك</h3>
-    <label class="label">الاسم</label><input class="input" id="subName" placeholder="اسم المشترك">
-    <label class="label">عدد الأمبير</label><input class="input" id="subAmps" type="number" value="5">
-    <button class="btn block" onclick="saveSub()">حفظ</button>
-    <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
-}
-
-async function saveSub(){
-  try {
-      const name=document.getElementById('subName').value.trim();
-      const amps=Number(document.getElementById('subAmps').value);
-      if(!name||!amps){alert('أدخل الاسم والأمبير');return}
-      showLoad(); closeModal();
-      const {data, error} = await supabase.from('subscribers').insert([{name, amps, phone:'-'}]);
-      if(error) throw error;
-      await syncData(); go('owner-subs'); alert('✅ تم الحفظ في السحابة');
-  } catch(e) {
-      hideLoad();
-      alert('❌ خطأ في الحفظ بالسحابة:\n' + e.message);
-  }
-}
-
-async function markPaid(subId){
-  const sub=DB.subscribers.find(s=>s.id===subId);if(!sub)return;
-  showLoad();
-  await supabase.from('payments').insert([{sub_id: subId, amount: calcMonthly(sub), method: 'cash', status: 'paid'}]);
-  await syncData(); go(session.currentPanel); alert('✅ تم تسجيل الدفع');
-}
-
-RENDERERS['owner-collect']=()=>`<div class="empty">سجل التحصيل (قيد التطوير)</div>`;
-RENDERERS['collector-today']=()=>`<div class="empty">جولة اليوم (قيد التطوير)</div>`;
-RENDERERS['citizen-gen']=()=>`<div class="empty">واجهة المواطن (قيد التطوير)</div>`;
-RENDERERS['citizen-invoice']=()=>`<div class="empty">الفاتورة (قيد التطوير)</div>`;
-RENDERERS['admin-gens']=()=>`<div class="empty">إدارة المنصة (قيد التطوير)</div>`;
-</script>
+    async function loadSubs() {
+      const { data, error } = await supabase.from('subscribers').select('*');
+      if (error) {
+        document.getElementById('subsList').innerText = 'خطأ: ' + error.message;
+        return;
+      }
+      document.getElementById('subsList').innerHTML = data.length === 0 ? 'لا يوجد مشتركين' : data.map(s => `<div style="padding:5px; border-bottom:1px solid #eee;">${s.name} - ${s.amps} أمبير</div>`).join('');
+    }
+  </script>
 </body>
 </html>

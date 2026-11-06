@@ -1,37 +1,441 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html dir="rtl" lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مولدتي - البداية</title>
-    <style>
-        body { 
-            font-family: sans-serif; 
-            background: #f0f2f5; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-            text-align: center; 
-        }
-        .card { 
-            background: white; 
-            padding: 40px; 
-            border-radius: 20px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-            width: 80%;
-            max-width: 400px;
-        }
-        h1 { color: #f59e0b; font-size: 30px; }
-        p { color: #555; line-height: 1.6; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مولدتي</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Segoe UI',Tahoma,sans-serif}
+body{background:#f0f2f5;color:#1a1a1a;min-height:100vh}
+:root{--primary:#f59e0b;--primary-dark:#d97706;--success:#10b981;--danger:#ef4444;--gray:#6b7280;--border:#e5e7eb;--bg:#f0f2f5}
+.hidden{display:none!important}
+.login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:linear-gradient(135deg,#f59e0b,#d97706)}
+.login h1{color:#fff;font-size:32px;margin-bottom:8px}
+.login p{color:#fff;opacity:.9;margin-bottom:40px}
+.role-btn{width:100%;max-width:340px;padding:20px;margin:8px 0;background:#fff;border:none;border-radius:16px;font-size:18px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;transition:transform .1s}
+.role-btn:active{transform:scale(.98)}
+.role-btn span{font-size:28px}
+.app{max-width:500px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg)}
+.header{background:var(--primary);color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.header h2{font-size:18px}
+.header button{background:rgba(255,255,255,.2);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer}
+.content{flex:1;padding:16px;padding-bottom:90px}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;max-width:500px;margin:0 auto;background:#fff;display:flex;border-top:1px solid var(--border);z-index:10}
+.nav-btn{flex:1;padding:10px 4px;border:none;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:var(--gray);font-size:10px}
+.nav-btn.active{color:var(--primary)}
+.nav-btn .ico{font-size:20px}
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.card h3{font-size:15px;margin-bottom:12px;color:var(--gray);font-weight:500}
+.stat{font-size:26px;font-weight:700;color:var(--primary-dark)}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;gap:8px}
+.row:last-child{border:none}
+.btn{padding:10px 16px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;background:var(--primary);color:#fff}
+.btn.success{background:var(--success)}
+.btn.danger{background:var(--danger)}
+.btn.ghost{background:#f3f4f6;color:var(--gray)}
+.btn.block{width:100%}
+.btn.sm{padding:6px 12px;font-size:12px}
+.input{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;font-size:14px;margin-bottom:10px;font-family:inherit}
+.label{display:block;font-size:13px;color:var(--gray);margin-bottom:6px}
+.status-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap}
+.on{background:#d1fae5;color:#065f46}
+.off{background:#fee2e2;color:#991b1b}
+.pending{background:#fef3c7;color:#92400e}
+.toggle{width:100%;padding:20px;border:none;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer;margin-bottom:12px}
+.toggle.on{background:var(--success);color:#fff}
+.toggle.off{background:var(--danger);color:#fff}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:100}
+.modal-box{background:#fff;width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:20px;max-height:90vh;overflow-y:auto}
+.modal-box h3{margin-bottom:16px;font-size:18px}
+.modal-close{background:var(--gray);color:#fff;border:none;padding:10px;border-radius:10px;width:100%;margin-top:10px;cursor:pointer}
+.qr-box{text-align:center;padding:20px;background:#f9fafb;border-radius:12px;margin-bottom:12px}
+.qr-box .num{font-size:24px;font-weight:700;letter-spacing:1px;direction:ltr;margin:10px 0;color:#1a1a1a}
+.empty{text-align:center;padding:40px 20px;color:var(--gray);font-size:14px}
+</style>
 </head>
 <body>
+
+<div id="login" class="login">
+  <h1>⚡ مولدتي</h1>
+  <p>نظام إدارة المولدات الأهلية</p>
+  <button class="role-btn" onclick="login('owner')"><span>⚡</span> أبو المولدة</button>
+  <button class="role-btn" onclick="login('collector')"><span>💰</span> الجابي</button>
+  <button class="role-btn" onclick="login('citizen')"><span>👤</span> المواطن</button>
+  <button class="role-btn" onclick="login('admin')"><span>⚙️</span> مدير المنصة</button>
+</div>
+
+<div id="app" class="app hidden">
+  <div class="header">
+    <h2 id="headerTitle">الرئيسية</h2>
+    <button onclick="logout()">خروج</button>
+  </div>
+  <div id="content" class="content"></div>
+  <div id="nav" class="bottom-nav"></div>
+</div>
+
+<div id="modal" class="modal hidden" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modalBox"></div>
+</div>
+
+<script>
+const KEY='mawaldi_data_v1';
+let DB=loadData();
+let session={role:null,currentPanel:null};
+
+function defaultData(){
+  return {
+    generator:{name:'مولدة النور',pricePerAmp:5000,superQiNumber:'07701234567',phone:'07701234567',status:false,startTime:null,totalHoursToday:0},
+    subscribers:[
+      {id:'s1',name:'أبو علي',amps:5,phone:'07711111111',createdAt:Date.now()},
+      {id:'s2',name:'أبو محمد',amps:3,phone:'07722222222',createdAt:Date.now()},
+      {id:'s3',name:'أبو حسين',amps:10,phone:'07733333333',createdAt:Date.now()}
+    ],
+    payments:[],expenses:[],complaints:[]
+  };
+}
+function loadData(){try{return JSON.parse(localStorage.getItem(KEY))||defaultData()}catch(e){return defaultData()}}
+function saveData(){localStorage.setItem(KEY,JSON.stringify(DB))}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function fmt(n){return Number(n||0).toLocaleString('en-US')+' د.ع'}
+function fmtDate(d){return new Date(d).toLocaleDateString('ar-IQ')}
+function isToday(ts){const d=new Date(ts),t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate()}
+function isSameMonth(ts){const d=new Date(ts),t=new Date();return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()}
+
+function login(role){
+  session.role=role;
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const first={owner:'owner-home',collector:'collector-today',citizen:'citizen-gen',admin:'admin-gens'};
+  go(first[role]);
+}
+function logout(){
+  session={role:null,currentPanel:null};
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+}
+
+const NAVS={
+  owner:[{id:'owner-home',icon:'🏠',label:'الرئيسية'},{id:'owner-subs',icon:'👥',label:'المشتركين'},{id:'owner-collect',icon:'💵',label:'التحصيل'},{id:'owner-exp',icon:'🧾',label:'المصاريف'},{id:'owner-report',icon:'📊',label:'التقرير'},{id:'owner-settings',icon:'⚙️',label:'الإعدادات'}],
+  collector:[{id:'collector-today',icon:'🚶',label:'جولة اليوم'},{id:'collector-log',icon:'📋',label:'سجل اليوم'}],
+  citizen:[{id:'citizen-gen',icon:'⚡',label:'المولدة'},{id:'citizen-invoice',icon:'🧾',label:'فاتورتي'},{id:'citizen-receipts',icon:'📃',label:'إيصالاتي'},{id:'citizen-complaint',icon:'📢',label:'شكوى'}],
+  admin:[{id:'admin-gens',icon:'🏭',label:'المولدات'},{id:'admin-rev',icon:'💰',label:'الإيرادات'},{id:'admin-support',icon:'🎫',label:'الدعم'}]
+};
+
+function go(panelId){
+  session.currentPanel=panelId;
+  renderNav();
+  const render=RENDERERS[panelId];
+  if(render){
+    document.getElementById('content').innerHTML=render();
+    const title=(NAVS[session.role].find(n=>n.id===panelId)||{}).label||'';
+    document.getElementById('headerTitle').textContent=title;
+  }
+}
+function renderNav(){
+  const navs=NAVS[session.role]||[];
+  document.getElementById('nav').innerHTML=navs.map(n=>`<button class="nav-btn ${session.currentPanel===n.id?'active':''}" onclick="go('${n.id}')"><span class="ico">${n.icon}</span><span>${n.label}</span></button>`).join('');
+}
+function openModal(html){document.getElementById('modalBox').innerHTML=html;document.getElementById('modal').classList.remove('hidden')}
+function closeModal(){document.getElementById('modal').classList.add('hidden')}
+
+function calcMonthly(sub){return sub.amps*DB.generator.pricePerAmp}
+function isSubPaidThisMonth(subId){return DB.payments.some(p=>p.subId===subId&&isSameMonth(p.date)&&p.status==='paid')}
+function isSubPendingThisMonth(subId){return DB.payments.some(p=>p.subId===subId&&isSameMonth(p.date)&&p.status==='pending')}
+function getUnpaidSubs(){return DB.subscribers.filter(s=>!isSubPaidThisMonth(s.id))}
+function totalCollectedToday(){return DB.payments.filter(p=>isToday(p.date)&&p.status==='paid').reduce((s,p)=>s+p.amount,0)}
+function totalCollectedMonth(){return DB.payments.filter(p=>isSameMonth(p.date)&&p.status==='paid').reduce((s,p)=>s+p.amount,0)}
+function totalPending(){return DB.payments.filter(p=>isSameMonth(p.date)&&p.status==='pending').reduce((s,p)=>s+p.amount,0)}
+function totalExpensesMonth(){return DB.expenses.filter(e=>isSameMonth(e.date)).reduce((s,e)=>s+e.amount,0)}
+
+const RENDERERS={};
+
+RENDERERS['owner-home']=()=>{
+  const g=DB.generator;
+  const unpaid=getUnpaidSubs();
+  const totalSubs=DB.subscribers.length;
+  const paidCount=totalSubs-unpaid.length;
+  const todayHours=g.status&&g.startTime?((Date.now()-g.startTime)/3600000).toFixed(1):(g.totalHoursToday||0).toFixed(1);
+  return `
     <div class="card">
-        <h1>⚡ مولدتي</h1>
-        <p>مبروك! هذا أول ملف لك على الإنترنت.</p>
-        <p>الخطوة الجاية نضيف لوحة التحكم الكاملة.</p>
+      <button class="toggle ${g.status?'on':'off'}" onclick="toggleGenerator()">${g.status?'⚡ المولدة شغالة — اضغط للإطفاء':'🔴 المولدة مطفية — اضغط للتشغيل'}</button>
+      <div class="row"><span>ساعات اليوم</span><b>${todayHours} ساعة</b></div>
     </div>
+    <div class="card"><h3>💰 اليوم</h3><div class="stat">${fmt(totalCollectedToday())}</div><div style="color:var(--gray);font-size:13px;margin-top:4px">المحصّل اليوم</div></div>
+    <div class="card"><h3>👥 المشتركين</h3>
+      <div class="row"><span>المسددين</span><b style="color:var(--success)">${paidCount}</b></div>
+      <div class="row"><span>المتأخرين</span><b style="color:var(--danger)">${unpaid.length}</b></div>
+      <div class="row"><span>المجموع</span><b>${totalSubs}</b></div>
+    </div>
+    ${totalPending()>0?`<div class="card" style="background:#fef3c7;border:1px solid #f59e0b"><b style="color:#92400e">⏳ يوجد ${fmt(totalPending())} بانتظار التأكيد</b><div style="margin-top:8px"><button class="btn sm" onclick="go('owner-collect')">راجع التحصيل</button></div></div>`:''}
+  `;
+};
+function toggleGenerator(){
+  const g=DB.generator;
+  if(g.status){if(g.startTime)g.totalHoursToday+=(Date.now()-g.startTime)/3600000;g.status=false;g.startTime=null}
+  else{g.status=true;g.startTime=Date.now()}
+  saveData();go('owner-home');
+}
+
+RENDERERS['owner-subs']=()=>`
+  <button class="btn block" style="margin-bottom:12px" onclick="addSubForm()">+ إضافة مشترك</button>
+  <input class="input" placeholder="🔍 بحث بالاسم أو الموبايل..." oninput="filterSubs(this.value)">
+  <div id="subsList">${renderSubsList(DB.subscribers)}</div>
+`;
+function renderSubsList(subs){
+  if(subs.length===0)return `<div class="empty">لا يوجد مشتركون</div>`;
+  return subs.map(s=>{
+    const paid=isSubPaidThisMonth(s.id),pending=isSubPendingThisMonth(s.id);
+    const status=paid?'<span class="status-pill on">✅ مسدد</span>':pending?'<span class="status-pill pending">⏳ بانتظار</span>':'<span class="status-pill off">❌ متأخر</span>';
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+        <div><b style="font-size:16px">${s.name}</b><div style="color:var(--gray);font-size:13px;margin-top:2px">${s.amps} أمبير · ${s.phone}</div></div>
+        ${status}
+      </div>
+      <div class="row"><span>المبلغ الشهري</span><b>${fmt(calcMonthly(s))}</b></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn sm" onclick="editSubForm('${s.id}')">تعديل</button>
+        <button class="btn sm danger" onclick="deleteSub('${s.id}')">حذف</button>
+        <button class="btn sm success" onclick="markPaid('${s.id}','cash')">استلمت كاش</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function filterSubs(q){
+  q=q.trim();
+  const f=q?DB.subscribers.filter(s=>s.name.includes(q)||s.phone.includes(q)):DB.subscribers;
+  document.getElementById('subsList').innerHTML=renderSubsList(f);
+}
+function addSubForm(){
+  openModal(`<h3>➕ إضافة مشترك</h3>
+    <label class="label">الاسم</label><input class="input" id="subName" placeholder="اسم المشترك">
+    <label class="label">عدد الأمبير</label><input class="input" id="subAmps" type="number" value="5">
+    <label class="label">رقم الموبايل</label><input class="input" id="subPhone" placeholder="07XXXXXXXXX">
+    <button class="btn block" onclick="saveSub()">حفظ</button>
+    <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
+}
+function saveSub(id){
+  const name=document.getElementById('subName').value.trim();
+  const amps=Number(document.getElementById('subAmps').value);
+  const phone=document.getElementById('subPhone').value.trim();
+  if(!name||!amps){alert('أدخل الاسم والأمبير');return}
+  if(id){const s=DB.subscribers.find(x=>x.id===id);if(s){s.name=name;s.amps=amps;s.phone=phone}}
+  else DB.subscribers.push({id:uid(),name,amps,phone,createdAt:Date.now()});
+  saveData();closeModal();go('owner-subs');
+}
+function editSubForm(id){
+  const s=DB.subscribers.find(x=>x.id===id);if(!s)return;
+  openModal(`<h3>✏️ تعديل مشترك</h3>
+    <label class="label">الاسم</label><input class="input" id="subName" value="${s.name}">
+    <label class="label">عدد الأمبير</label><input class="input" id="subAmps" type="number" value="${s.amps}">
+    <label class="label">رقم الموبايل</label><input class="input" id="subPhone" value="${s.phone}">
+    <button class="btn block" onclick="saveSub('${id}')">حفظ</button>
+    <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
+}
+function deleteSub(id){if(!confirm('تأكيد الحذف؟'))return;DB.subscribers=DB.subscribers.filter(s=>s.id!==id);saveData();go('owner-subs')}
+function markPaid(subId,method,amountOverride){
+  const sub=DB.subscribers.find(s=>s.id===subId);if(!sub)return;
+  const amount=amountOverride||calcMonthly(sub);
+  DB.payments.push({id:uid(),subId,amount,date:Date.now(),method,status:'paid'});
+  saveData();go(session.currentPanel);alert('✅ تم تسجيل الدفع');
+}
+
+RENDERERS['owner-collect']=()=>{
+  const unpaid=getUnpaidSubs().filter(s=>!isSubPendingThisMonth(s.id));
+  const pending=DB.payments.filter(p=>isSameMonth(p.date)&&p.status==='pending');
+  const paidToday=DB.payments.filter(p=>isToday(p.date)&&p.status==='paid');
+  return `
+    <div class="card"><h3>⏳ بانتظار التأكيد</h3>
+      ${pending.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':pending.map(p=>{
+        const sub=DB.subscribers.find(s=>s.id===p.subId);
+        return `<div class="row"><span>${sub?sub.name:'؟'}</span><span>${fmt(p.amount)}</span><button class="btn sm success" onclick="confirmPending('${p.id}')">تأكيد</button></div>`;
+      }).join('')}
+    </div>
+    <div class="card"><h3>❌ لم يدفعوا (${unpaid.length})</h3>
+      ${unpaid.length===0?'<div style="color:var(--gray);font-size:13px">كلهم دفعوا 🎉</div>':unpaid.map(s=>`<div class="row"><span>${s.name}</span><span>${fmt(calcMonthly(s))}</span><button class="btn sm success" onclick="markPaid('${s.id}','cash')">استلمت</button></div>`).join('')}
+    </div>
+    <div class="card"><h3>✅ استلمت اليوم (${paidToday.length})</h3>
+      ${paidToday.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':paidToday.map(p=>{const sub=DB.subscribers.find(s=>s.id===p.subId);return `<div class="row"><span>${sub?sub.name:'؟'}</span><span>${fmt(p.amount)}</span></div>`}).join('')}
+    </div>
+  `;
+};
+function confirmPending(id){const p=DB.payments.find(x=>x.id===id);if(p){p.status='paid';saveData();go('owner-collect')}}
+
+RENDERERS['owner-exp']=()=>{
+  const monthExp=DB.expenses.filter(e=>isSameMonth(e.date));
+  return `<button class="btn block" style="margin-bottom:12px" onclick="addExpenseForm()">+ إضافة مصروف</button>
+    <div class="card"><h3>مصاريف هذا الشهر</h3><div class="stat">${fmt(monthExp.reduce((s,e)=>s+e.amount,0))}</div></div>
+    <div class="card"><h3>📋 السجل</h3>
+      ${monthExp.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':monthExp.slice().reverse().map(e=>`<div class="row"><div><b>${e.type}</b><div style="font-size:12px;color:var(--gray)">${fmtDate(e.date)} ${e.note?'· '+e.note:''}</div></div><div style="text-align:left"><b style="color:var(--danger)">${fmt(e.amount)}</b><br><button class="btn sm ghost" style="margin-top:4px" onclick="delExpense('${e.id}')">حذف</button></div></div>`).join('')}
+    </div>`;
+};
+function addExpenseForm(){
+  openModal(`<h3>➕ مصروف جديد</h3>
+    <label class="label">النوع</label><select class="input" id="expType"><option>وقود</option><option>زيت</option><option>صيانة</option><option>أجور</option><option>أخرى</option></select>
+    <label class="label">المبلغ</label><input class="input" id="expAmount" type="number" placeholder="0">
+    <label class="label">ملاحظة</label><input class="input" id="expNote">
+    <button class="btn block" onclick="saveExpense()">حفظ</button>
+    <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
+}
+function saveExpense(){
+  const type=document.getElementById('expType').value;
+  const amount=Number(document.getElementById('expAmount').value);
+  const note=document.getElementById('expNote').value.trim();
+  if(!amount){alert('أدخل المبلغ');return}
+  DB.expenses.push({id:uid(),type,amount,note,date:Date.now()});
+  saveData();closeModal();go('owner-exp');
+}
+function delExpense(id){if(!confirm('حذف؟'))return;DB.expenses=DB.expenses.filter(e=>e.id!==id);saveData();go('owner-exp')}
+
+RENDERERS['owner-report']=()=>{
+  const income=totalCollectedMonth(),pending=totalPending(),expenses=totalExpensesMonth(),net=income-expenses;
+  const totalSubs=DB.subscribers.length,paidCount=DB.subscribers.filter(s=>isSubPaidThisMonth(s.id)).length;
+  return `<div class="card"><h3>📊 تقرير الشهر</h3>
+    <div class="row"><span>الدخل (مسدد)</span><b style="color:var(--success)">${fmt(income)}</b></div>
+    <div class="row"><span>بانتظار التأكيد</span><b style="color:#d97706">${fmt(pending)}</b></div>
+    <div class="row"><span>المصاريف</span><b style="color:var(--danger)">${fmt(expenses)}</b></div>
+    <div class="row" style="font-size:17px;padding-top:14px;border-top:2px solid var(--border);margin-top:10px"><span><b>الصافي</b></span><b style="color:${net>=0?'var(--success)':'var(--danger)'}">${fmt(net)}</b></div>
+    </div>
+    <div class="card"><h3>👥 التحصيل</h3>
+      <div class="row"><span>مسددون</span><b>${paidCount} / ${totalSubs}</b></div>
+      <div class="row"><span>نسبة التحصيل</span><b>${totalSubs?Math.round(paidCount/totalSubs*100):0}%</b></div>
+    </div>
+    <button class="btn block ghost" onclick="window.print()">🖨️ طباعة</button>`;
+};
+
+RENDERERS['owner-settings']=()=>{
+  const g=DB.generator;
+  const qrUrl=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('mawaldi://gen/'+g.superQiNumber)}`;
+  return `<div class="card"><h3>⚙️ بيانات المولدة</h3>
+    <label class="label">اسم المولدة</label><input class="input" id="setName" value="${g.name}">
+    <label class="label">سعر الأمبير</label><input class="input" id="setPrice" type="number" value="${g.pricePerAmp}">
+    <label class="label">رقم الموبايل</label><input class="input" id="setPhone" value="${g.phone}">
+    <label class="label">رقم سوبر كيو للتحويل</label><input class="input" id="setSuperQi" value="${g.superQiNumber}">
+    <button class="btn block" onclick="saveSettings()">حفظ</button>
+    </div>
+    <div class="card"><h3>📱 QR للمواطنين</h3>
+      <div class="qr-box"><img src="${qrUrl}" alt="QR" style="border-radius:8px"><div style="font-size:13px;color:var(--gray);margin-top:12px">اطبعه وعلّقه على المولدة</div></div>
+    </div>`;
+};
+function saveSettings(){
+  DB.generator.name=document.getElementById('setName').value.trim();
+  DB.generator.pricePerAmp=Number(document.getElementById('setPrice').value)||0;
+  DB.generator.phone=document.getElementById('setPhone').value.trim();
+  DB.generator.superQiNumber=document.getElementById('setSuperQi').value.trim();
+  saveData();alert('✅ تم الحفظ');go('owner-settings');
+}
+
+RENDERERS['collector-today']=()=>{
+  const unpaid=DB.subscribers.filter(s=>!isSubPaidThisMonth(s.id)&&!isSubPendingThisMonth(s.id));
+  return `<div class="card"><h3>🚶 جولة اليوم</h3><div style="color:var(--gray);font-size:13px">${unpaid.length} مشترك لم يدفعوا</div></div>
+    ${unpaid.length===0?'<div class="empty">كل المشتركين دفعوا 🎉</div>':unpaid.map(s=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>${s.name}</b><div style="color:var(--gray);font-size:13px;margin-top:2px">${s.phone}</div></div><div style="text-align:left"><div style="font-weight:700;color:var(--primary-dark)">${fmt(calcMonthly(s))}</div><button class="btn sm success" style="margin-top:6px" onclick="markPaid('${s.id}','cash')">استلمت</button></div></div></div>`).join('')}`;
+};
+RENDERERS['collector-log']=()=>{
+  const today=DB.payments.filter(p=>isToday(p.date)&&p.status==='paid');
+  const total=today.reduce((s,p)=>s+p.amount,0);
+  return `<div class="card"><h3>💰 مجموع اليوم</h3><div class="stat">${fmt(total)}</div><div style="color:var(--gray);font-size:13px;margin-top:4px">${today.length} عملية</div></div>
+    <div class="card"><h3>📋 السجل</h3>
+      ${today.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':today.map(p=>{const sub=DB.subscribers.find(s=>s.id===p.subId);return `<div class="row"><div><b>${sub?sub.name:'؟'}</b><div style="font-size:12px;color:var(--gray)">${p.method==='cash'?'كاش':'تحويل'}</div></div><b>${fmt(p.amount)}</b></div>`}).join('')}
+    </div>`;
+};
+
+RENDERERS['citizen-gen']=()=>{
+  const g=DB.generator;
+  const hours=g.status&&g.startTime?((Date.now()-g.startTime)/3600000).toFixed(1):(g.totalHoursToday||0).toFixed(1);
+  return `<div class="card" style="text-align:center;padding:30px 20px">
+    <div style="font-size:60px;margin-bottom:10px">${g.status?'⚡':'🔴'}</div>
+    <div style="font-size:22px;font-weight:700;color:${g.status?'var(--success)':'var(--danger)'}">${g.status?'المولدة شغالة':'المولدة مطفية'}</div>
+    <div style="color:var(--gray);margin-top:6px">${g.name}</div>
+    </div>
+    <div class="card">
+      <div class="row"><span>ساعات اليوم</span><b>${hours} ساعة</b></div>
+      <div class="row"><span>سعر الأمبير</span><b>${fmt(g.pricePerAmp)}</b></div>
+      <div class="row"><span>رقم أبو المولدة</span><b dir="ltr">${g.phone}</b></div>
+    </div>`;
+};
+
+RENDERERS['citizen-invoice']=()=>{
+  const sub=DB.subscribers[0];
+  if(!sub)return '<div class="empty">لا يوجد حساب</div>';
+  const amount=calcMonthly(sub);
+  const paid=isSubPaidThisMonth(sub.id),pending=isSubPendingThisMonth(sub.id);
+  const status=paid?'<span class="status-pill on">✅ مسدد</span>':pending?'<span class="status-pill pending">⏳ بانتظار</span>':'<span class="status-pill off">❌ غير مسدد</span>';
+  return `<div class="card"><h3>فاتورة ${new Date().toLocaleDateString('ar-IQ',{month:'long',year:'numeric'})}</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0">
+      <div><div style="font-size:13px;color:var(--gray)">المبلغ المطلوب</div><div class="stat">${fmt(amount)}</div></div>${status}
+    </div>
+    <div class="row"><span>الأمبير</span><b>${sub.amps}</b></div>
+    <div class="row"><span>سعر الأمبير</span><b>${fmt(DB.generator.pricePerAmp)}</b></div>
+    </div>
+    ${!paid?`<button class="btn block" onclick="payOnline('${sub.id}')">💳 ادفع الآن (سوبر كيو)</button>`:''}
+    ${!paid?`<button class="btn block success" style="margin-top:8px" onclick="markPaid('${sub.id}','cash')">💵 سلمت كاش للجابي</button>`:''}`;
+};
+function payOnline(subId){
+  const g=DB.generator,sub=DB.subscribers.find(s=>s.id===subId),amount=calcMonthly(sub);
+  openModal(`<h3>💳 الدفع عبر سوبر كيو</h3>
+    <div class="qr-box"><div style="font-size:13px;color:var(--gray);margin-bottom:6px">حوّل المبلغ إلى:</div>
+      <div class="num">${g.superQiNumber}</div>
+      <button class="btn sm ghost" onclick="copyText('${g.superQiNumber}')">📋 انسخ الرقم</button></div>
+    <div class="qr-box" style="background:#fef3c7"><div style="font-size:13px;color:#92400e">المبلغ</div><div class="num" style="color:#92400e">${fmt(amount)}</div></div>
+    <div style="font-size:13px;color:var(--gray);margin:12px 0;padding:12px;background:#f3f4f6;border-radius:10px;line-height:1.8">
+      <b>الخطوات:</b><br>1. افتح سوبر كيو<br>2. حوّل المبلغ للرقم<br>3. ارجع هنا واضغط "حوّلت"<br>4. الجابي يأكد
+    </div>
+    <button class="btn block success" onclick="markPending('${subId}')">✅ حوّلت المبلغ</button>
+    <button class="modal-close" onclick="closeModal()">إلغاء</button>`);
+}
+function copyText(t){navigator.clipboard&&navigator.clipboard.writeText(t).then(()=>alert('✅ تم النسخ')).catch(()=>alert('انسخ يدوياً: '+t))}
+function markPending(subId){
+  const sub=DB.subscribers.find(s=>s.id===subId);
+  DB.payments.push({id:uid(),subId,amount:calcMonthly(sub),date:Date.now(),method:'transfer',status:'pending'});
+  saveData();closeModal();go('citizen-invoice');alert('⏳ تم الإرسال — بانتظار التأكيد');
+}
+
+RENDERERS['citizen-receipts']=()=>{
+  const sub=DB.subscribers[0];
+  if(!sub)return '<div class="empty">لا يوجد حساب</div>';
+  const payments=DB.payments.filter(p=>p.subId===sub.id).sort((a,b)=>b.date-a.date);
+  if(payments.length===0)return '<div class="empty">لا يوجد إيصالات بعد</div>';
+  return payments.map(p=>`<div class="card"><div style="display:flex;justify-content:space-between;align-items:start"><div><b>${fmt(p.amount)}</b><div style="font-size:12px;color:var(--gray);margin-top:4px">${fmtDate(p.date)} · ${p.method==='cash'?'كاش':'تحويل'}</div></div>${p.status==='paid'?'<span class="status-pill on">✅ مسدد</span>':'<span class="status-pill pending">⏳ بانتظار</span>'}</div></div>`).join('');
+};
+
+RENDERERS['citizen-complaint']=()=>`
+  <div class="card"><h3>📢 إرسال شكوى</h3>
+    <label class="label">النوع</label>
+    <select class="input" id="compType"><option>المولدة متوقفة</option><option>ساعات قليلة</option><option>مشكلة أخرى</option></select>
+    <label class="label">التفاصيل</label>
+    <textarea class="input" id="compText" rows="4" placeholder="اكتب هنا..."></textarea>
+    <button class="btn block" onclick="sendComplaint()">📤 إرسال</button>
+  </div>
+  <div class="card"><h3>📋 شكاواي السابقة</h3>
+    ${DB.complaints.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':DB.complaints.slice().reverse().map(c=>`<div class="row"><div><b>${c.type}</b><div style="font-size:12px;color:var(--gray);margin-top:2px">${c.text}</div></div><div style="font-size:12px;color:var(--gray)">${fmtDate(c.date)}</div></div>`).join('')}
+  </div>`;
+function sendComplaint(){
+  const type=document.getElementById('compType').value;
+  const text=document.getElementById('compText').value.trim();
+  if(!text){alert('اكتب التفاصيل');return}
+  DB.complaints.push({id:uid(),type,text,date:Date.now()});
+  saveData();go('citizen-complaint');alert('✅ تم الإرسال');
+}
+
+RENDERERS['admin-gens']=()=>`
+  <div class="card"><h3>🏭 المولدات المسجلة</h3><div class="row"><span>${DB.generator.name}</span><b style="color:var(--success)">نشط</b></div></div>
+  <div class="card"><h3>📊 إحصائيات</h3>
+    <div class="row"><span>عدد المولدات</span><b>1</b></div>
+    <div class="row"><span>إجمالي المشتركين</span><b>${DB.subscribers.length}</b></div>
+  </div>`;
+RENDERERS['admin-rev']=()=>`
+  <div class="card"><h3>💰 إيرادات المنصة</h3><div class="stat">${fmt(0)}</div><div style="color:var(--gray);font-size:13px;margin-top:4px">لا يوجد اشتراكات مدفوعة</div></div>
+  <div class="card"><h3>💵 إجمالي معاملات الشهر</h3><div class="stat">${fmt(totalCollectedMonth())}</div></div>`;
+RENDERERS['admin-support']=()=>`
+  <div class="card"><h3>🎫 الشكاوى</h3>
+    ${DB.complaints.length===0?'<div style="color:var(--gray);font-size:13px">لا يوجد</div>':DB.complaints.map(c=>`<div class="row"><div><b>${c.type}</b><div style="font-size:12px;color:var(--gray)">${c.text}</div></div><div style="font-size:12px;color:var(--gray)">${fmtDate(c.date)}</div></div>`).join('')}
+  </div>`;
+
+setInterval(()=>{
+  if(session.currentPanel==='owner-home'||session.currentPanel==='citizen-gen'){
+    if(!document.getElementById('modal').classList.contains('hidden'))return;
+    go(session.currentPanel);
+  }
+},30000);
+</script>
 </body>
 </html>

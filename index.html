@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>مولدتي</title>
+<title>مولدتي - نسخة الفحص</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,'Segoe UI',Tahoma,sans-serif}
@@ -41,7 +41,6 @@ body{background:#f0f2f5;color:#1a1a1a;min-height:100vh}
 .status-pill{display:inline-block;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;white-space:nowrap}
 .on{background:#d1fae5;color:#065f46}
 .off{background:#fee2e2;color:#991b1b}
-.pending{background:#fef3c7;color:#92400e}
 .toggle{width:100%;padding:20px;border:none;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer;margin-bottom:12px}
 .toggle.on{background:var(--success);color:#fff}
 .toggle.off{background:var(--danger);color:#fff}
@@ -55,9 +54,17 @@ body{background:#f0f2f5;color:#1a1a1a;min-height:100vh}
 </head>
 <body>
 
+<script>
+// هذا الكود يمسك أي خطأ ويطلع لك رسالة
+window.onerror = function(msg, url, line, col, error) {
+    alert('⚠️ صار خطأ بالكود:\n' + msg + '\nالسطر: ' + line);
+    return false;
+};
+</script>
+
 <div id="login" class="login">
   <h1>⚡ مولدتي</h1>
-  <p style="background:white; color:#d97706; padding:5px 15px; border-radius:20px; font-weight:bold; margin-bottom:20px;">الإصدار الجديد 2.0</p>
+  <p style="background:white; color:#d97706; padding:5px 15px; border-radius:20px; font-weight:bold; margin-bottom:20px;">نسخة الفحص 3.0</p>
   <button class="role-btn" onclick="login('owner')"><span>⚡</span> أبو المولدة</button>
   <button class="role-btn" onclick="login('collector')"><span>💰</span> الجابي</button>
   <button class="role-btn" onclick="login('citizen')"><span>👤</span> المواطن</button>
@@ -83,13 +90,12 @@ body{background:#f0f2f5;color:#1a1a1a;min-height:100vh}
 const supabaseUrl = 'https://mbukheyuiuiadjkchhrs.supabase.co';
 const supabaseKey = 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ';
 let supabase = null;
-try { supabase = window.supabase.createClient(supabaseUrl, supabaseKey); } catch(e) { console.error(e); }
+try { supabase = window.supabase.createClient(supabaseUrl, supabaseKey); } catch(e) { alert('فشل الاتصال بالسحابة'); }
 
 let DB = {
     generator: {name:'مولدة النور', pricePerAmp:5000, superQiNumber:'07701234567', status:false},
     subscribers: [],
-    payments: [],
-    expenses: []
+    payments: []
 };
 let session={role:null,currentPanel:null};
 
@@ -107,7 +113,7 @@ async function syncData() {
         ]);
         if (s.data) DB.subscribers = s.data;
         if (p.data) DB.payments = p.data;
-    } catch (err) { console.error(err); }
+    } catch (err) { alert('خطأ في جلب البيانات: ' + err.message); }
     hideLoad();
 }
 
@@ -147,7 +153,14 @@ function renderNav(){
   const navs=NAVS[session.role]||[];
   document.getElementById('nav').innerHTML=navs.map(n=>`<button class="nav-btn ${session.currentPanel===n.id?'active':''}" onclick="go('${n.id}')"><span class="ico">${n.icon}</span><span>${n.label}</span></button>`).join('');
 }
-function openModal(html){document.getElementById('modalBox').innerHTML=html;document.getElementById('modal').classList.remove('hidden')}
+
+function openModal(html){
+    const m = document.getElementById('modal');
+    const b = document.getElementById('modalBox');
+    if(!m || !b) { alert('❌ خطأ فني: نافذة المودال غير موجودة!'); return; }
+    b.innerHTML = html;
+    m.classList.remove('hidden');
+}
 function closeModal(){document.getElementById('modal').classList.add('hidden')}
 
 function calcMonthly(sub){return sub.amps*DB.generator.pricePerAmp}
@@ -160,7 +173,7 @@ RENDERERS['owner-home']=()=>`
 `;
 
 RENDERERS['owner-subs']=()=>`
-  <button class="btn block" style="margin-bottom:12px" onclick="addSubForm()">+ إضافة مشترك</button>
+  <button class="btn block" style="margin-bottom:12px" onclick="alert('الزر يشتغل!'); addSubForm()">+ إضافة مشترك</button>
   ${DB.subscribers.length===0?'<div class="empty">لا يوجد مشتركون</div>':DB.subscribers.map(s=>`
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
@@ -182,12 +195,18 @@ function addSubForm(){
 }
 
 async function saveSub(){
-  const name=document.getElementById('subName').value.trim();
-  const amps=Number(document.getElementById('subAmps').value);
-  if(!name||!amps){alert('أدخل الاسم والأمبير');return}
-  showLoad(); closeModal();
-  await supabase.from('subscribers').insert([{name, amps, phone:'-'}]);
-  await syncData(); go('owner-subs'); alert('✅ تم الحفظ في السحابة');
+  try {
+      const name=document.getElementById('subName').value.trim();
+      const amps=Number(document.getElementById('subAmps').value);
+      if(!name||!amps){alert('أدخل الاسم والأمبير');return}
+      showLoad(); closeModal();
+      const {data, error} = await supabase.from('subscribers').insert([{name, amps, phone:'-'}]);
+      if(error) throw error;
+      await syncData(); go('owner-subs'); alert('✅ تم الحفظ في السحابة');
+  } catch(e) {
+      hideLoad();
+      alert('❌ خطأ في الحفظ بالسحابة:\n' + e.message);
+  }
 }
 
 async function markPaid(subId){

@@ -1,18 +1,37 @@
-const supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+const supabaseUrl = 'https://mbukheyuiuiadjkchhrs.supabase.co';
+const supabaseKey = 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ';
+let supabaseClient = null;
 let DB = { subs: [], status: false };
 let currentRole = '';
 
+try {
+    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+} catch(e) {
+    alert("فشل الاتصال بالسحابة: " + e.message);
+}
+
 async function syncData() {
-    const { data, error } = await supabase.from('subscribers').select('*');
-    if (!error && data) DB.subs = data;
+    if(!supabaseClient) return;
+    const { data, error } = await supabaseClient.from('subscribers').select('*');
+    if (error) throw new Error(error.message);
+    DB.subs = data;
 }
 
 async function login(role) {
     currentRole = role;
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('appScreen').classList.remove('hidden');
-    await syncData();
+    
+    // 1. افتح الشاشة أولاً (حتى لا تتجمد)
     render();
+
+    // 2. جيب البيانات في الخلفية وحدث الشاشة
+    try {
+        await syncData();
+        render();
+    } catch(e) {
+        alert("خطأ في جلب البيانات: " + e.message);
+    }
 }
 
 function logout() {
@@ -22,6 +41,7 @@ function logout() {
 
 function render() {
     const content = document.getElementById('content');
+    if(!content) return;
     document.getElementById('headerTitle').innerText = currentRole === 'owner' ? 'أبو المولدة' : 'المواطن';
 
     if (currentRole === 'owner') {
@@ -61,11 +81,15 @@ async function saveSub() {
     const amps = document.getElementById('amps').value;
     if (!name) return alert('اكتب الاسم');
     
-    const { error } = await supabase.from('subscribers').insert([{ name, amps, phone: '-' }]);
-    if (error) return alert('خطأ: ' + error.message);
-    
-    document.getElementById('modal').classList.add('hidden');
-    await syncData();
-    render();
-    alert('✅ تم الحفظ!');
+    try {
+        const { error } = await supabaseClient.from('subscribers').insert([{ name, amps, phone: '-' }]);
+        if (error) throw error;
+        
+        document.getElementById('modal').classList.add('hidden');
+        await syncData();
+        render();
+        alert('✅ تم الحفظ!');
+    } catch(e) {
+        alert("فشل الحفظ: " + e.message);
+    }
 }

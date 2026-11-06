@@ -4,76 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مولدتي</title>
+    <!-- صائد الأخطاء: سيظهر لك تنبيه إذا كان الكود فيه خطأ إملائي -->
+    <script>
+        window.onerror = function(msg, url, line) {
+            alert('⚠️ خطأ برمجي:\n' + msg + '\nالسطر: ' + line);
+            return false;
+        };
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 20px; text-align: center; }
+        body { font-family: sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
         .hidden { display: none !important; }
-        .btn { padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; width: 100%; max-width: 300px; margin: 10px auto; display: block; font-weight: bold; }
-        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: right; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .screen { padding: 20px; text-align: center; }
+        .btn { padding: 15px; background: #f59e0b; color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; width: 100%; max-width: 300px; margin: 10px auto; display: block; }
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: right; }
+        .input { width: 90%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .header { background: #f59e0b; color: white; padding: 15px; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
-    <!-- شاشة الدخول -->
-    <div id="loginScreen">
-        <h1 style="color: #f59e0b;">⚡ مولدتي</h1>
-        <button class="btn" onclick="goToApp()">أبو المولدة</button>
+    <div id="loginScreen" class="screen">
+        <h1>⚡ مولدتي</h1>
+        <button class="btn" onclick="login('owner')">أبو المولدة</button>
+        <button class="btn" onclick="login('citizen')">المواطن</button>
     </div>
 
-    <!-- شاشة التطبيق (مخفية في البداية) -->
     <div id="appScreen" class="hidden">
-        <button class="btn" style="background: #ef4444; padding: 10px;" onclick="location.reload()">خروج</button>
-        <div id="content" class="card">
-            <h3>جاري تحميل البيانات...</h3>
+        <div class="header">
+            <h3 id="headerTitle" style="margin: 0;">الرئيسية</h3>
+            <button onclick="logout()" style="background:transparent; border:1px solid white; color:white; border-radius:5px; padding: 5px;">خروج</button>
         </div>
+        <div class="screen" id="content"></div>
     </div>
 
-    <script>
-        // إعداد الاتصال بالسحابة
-        const supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+    <div id="modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); padding: 20px; display: flex; align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 400px; text-align: center;" id="modalContent"></div>
+    </div>
 
-        // 1. دالة فتح الشاشة (بدون انتظار السحابة)
-        function goToApp() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden');
-            loadData(); // نطلب البيانات بعد ما تفتح الشاشة
-        }
-
-        // 2. دالة جلب البيانات
-        async function loadData() {
-            const res = await supabase.from('subscribers').select('*');
-            const content = document.getElementById('content');
-            
-            if (res.error) {
-                content.innerHTML = '<h3 style="color:red">خطأ: ' + res.error.message + '</h3>';
-                return;
-            }
-
-            let html = '<h3>المشتركين (' + res.data.length + ')</h3>';
-            html += '<button class="btn" style="background: #10b981; margin: 10px 0;" onclick="addSub()">+ إضافة مشترك</button>';
-            
-            res.data.forEach(function(s) {
-                html += '<div style="border-bottom: 1px solid #eee; padding: 10px 0;">' + s.name + ' - ' + s.amps + ' أمبير</div>';
-            });
-
-            content.innerHTML = html;
-        }
-
-        // 3. دالة إضافة مشترك
-        async function addSub() {
-            let name = prompt('اكتب اسم المشترك:');
-            if (!name) return;
-            let amps = prompt('عدد الأمبير:', '5');
-            if (!amps) return;
-
-            const res = await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '-' }]);
-            
-            if (res.error) {
-                alert('فشل الحفظ: ' + res.error.message);
-            } else {
-                alert('✅ تم الحفظ بنجاح!');
-                loadData(); // تحديث القائمة
-            }
-        }
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>

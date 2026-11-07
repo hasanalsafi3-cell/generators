@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مولدتي - نظام شامل</title>
+    <title>مولدتي - النظام الشامل</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
         body { background: #f4f7fb; padding-bottom: 80px; }
         .hidden { display: none !important; }
         
-        /* شاشة الدخول */
         .login-screen { text-align: center; padding: 50px 20px; }
         .login-screen h1 { color: #0f172a; margin-bottom: 30px; }
         .btn-role { width: 100%; padding: 15px; margin-bottom: 10px; border: none; border-radius: 10px; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
@@ -18,7 +17,6 @@
         .btn-citizen { background: #3b82f6; }
         .btn-admin { background: #1e293b; }
 
-        /* التطبيق */
         .header { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
         .header h3 { color: #0f172a; }
         .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
@@ -26,8 +24,8 @@
         .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
         .btn-save { background: #10b981; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .btn-red { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
         
-        /* القائمة السفلية */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; }
         .nav-btn { background: none; border: none; font-size: 12px; font-weight: bold; color: #64748b; cursor: pointer; }
         .nav-btn.active { color: #f59e0b; }
@@ -36,7 +34,6 @@
 </head>
 <body>
 
-    <!-- 1. شاشة الدخول -->
     <div id="loginScreen" class="login-screen">
         <h1>مرحباً بك 👋</h1>
         <button class="btn-role btn-owner" onclick="login('owner')">⚡ صاحب المولد</button>
@@ -44,7 +41,6 @@
         <button class="btn-role btn-admin" onclick="login('admin')">👑 مدير المنصة</button>
     </div>
 
-    <!-- 2. شاشة التطبيق -->
     <div id="appScreen" class="hidden">
         <div class="header">
             <h3 id="pageTitle">الرئيسية</h3>
@@ -52,18 +48,15 @@
         </div>
         
         <div class="content" id="mainContent"></div>
-        
         <div class="bottom-nav" id="bottomNav"></div>
     </div>
 
     <script>
-        // --- إعدادات السحابة ---
         var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-        var DB = { subs: [] };
+        var DB = { subs: [], payments: [], expenses: [] };
         var currentRole = '';
         var currentTab = 'home';
 
-        // --- الدخول والخروج ---
         function login(role) {
             currentRole = role;
             document.getElementById('loginScreen').classList.add('hidden');
@@ -73,11 +66,8 @@
             renderContent();
         }
 
-        function logout() {
-            window.location.reload();
-        }
+        function logout() { window.location.reload(); }
 
-        // --- التنقل ---
         function navigate(tab) {
             currentTab = tab;
             renderNav();
@@ -92,113 +82,149 @@
                 html += '<button class="nav-btn" onclick="navigate(&quot;subs&quot;)"><span>👥</span>المشتركين</button>';
                 html += '<button class="nav-btn" onclick="navigate(&quot;collect&quot;)"><span>💵</span>التحصيل</button>';
                 html += '<button class="nav-btn" onclick="navigate(&quot;expenses&quot;)"><span>🧾</span>المصاريف</button>';
-                html += '<button class="nav-btn" onclick="navigate(&quot;settings&quot;)"><span>⚙️</span>الإعدادات</button>';
             } else if (currentRole === 'citizen') {
                 html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>⚡</span>المولدة</button>';
                 html += '<button class="nav-btn" onclick="navigate(&quot;invoice&quot;)"><span>🧾</span>فاتورتي</button>';
             } else if (currentRole === 'admin') {
                 html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>📊</span>الإحصائيات</button>';
-                html += '<button class="nav-btn" onclick="navigate(&quot;owners&quot;)"><span>🏭</span>المولدات</button>';
             }
             nav.innerHTML = html;
         }
 
-        // --- رسم المحتوى ---
         async function renderContent() {
             var content = document.getElementById('mainContent');
             var title = document.getElementById('pageTitle');
             content.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
 
             try {
-                var res = await supabase.from('subscribers').select('*');
-                if (res.data) DB.subs = res.data;
+                var resSubs = await supabase.from('subscribers').select('*');
+                var resPays = await supabase.from('payments').select('*');
+                var resExps = await supabase.from('expenses').select('*');
+                if (resSubs.data) DB.subs = resSubs.data;
+                if (resPays.data) DB.payments = resPays.data;
+                if (resExps.data) DB.expenses = resExps.data;
             } catch(e) { console.log(e); }
 
             var html = '';
+            var currentPrice = 5000; // سعر الأمبير (تقدر تغيره من الإعدادات لاحقاً)
 
             if (currentRole === 'owner') {
+                // --- الرئيسية ---
                 if (currentTab === 'home') {
                     title.innerText = 'لوحة التحكم';
+                    var totalCash = 0;
+                    for(var i=0; i<DB.payments.length; i++) { totalCash += Number(DB.payments[i].amount); }
+                    html += '<div class="card"><h3>إجمالي المحصل</h3><h1 style="color:#10b981;">' + totalCash.toLocaleString() + ' د.ع</h1></div>';
                     html += '<div class="card"><h3>عدد المشتركين</h3><h1 style="color:#f59e0b;">' + DB.subs.length + '</h1></div>';
-                    html += '<div class="card"><h3>المحصّل اليوم</h3><h1 style="color:#10b981;">0 د.ع</h1></div>';
                 } 
+                // --- المشتركين ---
                 else if (currentTab === 'subs') {
                     title.innerText = 'إدارة المشتركين';
-                    html += '<div class="card">';
-                    html += '<h3>إضافة مشترك</h3>';
+                    html += '<div class="card"><h3>إضافة مشترك جديد</h3>';
                     html += '<input type="text" id="mName" class="input" placeholder="اسم المشترك">';
                     html += '<input type="number" id="mAmps" class="input" value="5" placeholder="الأمبير">';
-                    html += '<button class="btn-save" onclick="saveSub()">حفظ المشترك</button>';
-                    html += '</div>';
+                    html += '<button class="btn-save" onclick="saveSub()">حفظ المشترك</button></div>';
 
-                    html += '<div class="card"><h3>قائمة المشتركين</h3>';
-                    if (DB.subs.length === 0) html += '<p>لا يوجد مشتركين.</p>';
+                    html += '<div class="card"><h3>القائمة</h3>';
                     for (var i = 0; i < DB.subs.length; i++) {
                         var s = DB.subs[i];
                         html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:10px 0;">';
-                        html += '<span><b>' + s.name + '</b> - ' + s.amps + ' أمبير</span>';
-                        html += '<button onclick="deleteSub(&quot;' + s.id + '&quot;)" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:5px;">حذف</button>';
+                        html += '<span><b>' + s.name + '</b> (' + s.amps + ' أمبير)</span>';
+                        html += '<button class="btn-red" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف</button>';
                         html += '</div>';
                     }
                     html += '</div>';
                 }
+                // --- التحصيل ---
                 else if (currentTab === 'collect') {
                     title.innerText = 'التحصيل';
-                    html += '<div class="card"><h3>سجل الدفعات</h3><p>قريباً...</p></div>';
+                    html += '<div class="card"><h3>سجل استلام الكاش</h3>';
+                    if(DB.subs.length === 0) html += '<p>أضف مشتركين أولاً.</p>';
+                    
+                    for (var i = 0; i < DB.subs.length; i++) {
+                        var s = DB.subs[i];
+                        var amount = s.amps * currentPrice;
+                        html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:10px 0;">';
+                        html += '<span><b>' + s.name + '</b><br><small style="color:#64748b;">' + amount.toLocaleString() + ' د.ع</small></span>';
+                        html += '<button class="btn-save" style="width:80px; padding:5px;" onclick="paySub(&quot;' + s.id + '&quot;, ' + amount + ')">استلمت</button>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
                 }
+                // --- المصاريف ---
                 else if (currentTab === 'expenses') {
                     title.innerText = 'المصاريف';
-                    html += '<div class="card"><h3>سجل المصاريف</h3><p>قريباً...</p></div>';
-                }
-                else if (currentTab === 'settings') {
-                    title.innerText = 'الإعدادات';
-                    html += '<div class="card"><h3>سعر الأمبير</h3><p>5000 د.ع</p></div>';
+                    html += '<div class="card"><h3>إضافة مصروف</h3>';
+                    html += '<input type="text" id="eType" class="input" placeholder="النوع (وقود، صيانة...)">';
+                    html += '<input type="number" id="eAmount" class="input" placeholder="المبلغ">';
+                    html += '<button class="btn-save" style="background:#ef4444;" onclick="saveExpense()">حفظ المصروف</button></div>';
+
+                    html += '<div class="card"><h3>السجل</h3>';
+                    for (var i = 0; i < DB.expenses.length; i++) {
+                        var e = DB.expenses[i];
+                        html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:10px 0;">';
+                        html += '<span><b>' + e.type + '</b></span>';
+                        html += '<span style="color:#ef4444;">' + Number(e.amount).toLocaleString() + ' د.ع</span>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
                 }
             } 
+            // --- المواطن ---
             else if (currentRole === 'citizen') {
-                title.innerText = 'واجهة المواطن';
-                html += '<div class="card" style="text-align:center;"><h1>⚡</h1><h3 style="color:#10b981;">المولدة شغالة</h3></div>';
-                if (currentTab === 'invoice') html += '<div class="card"><h3>فاتورة الشهر</h3><p>عليك: 25,000 د.ع</p></div>';
+                if (currentTab === 'home') {
+                    title.innerText = 'المولدة';
+                    html += '<div class="card" style="text-align:center;"><h1>⚡</h1><h3 style="color:#10b981;">المولدة شغالة الآن</h3></div>';
+                }
+                if (currentTab === 'invoice') {
+                    title.innerText = 'فاتورتي';
+                    html += '<div class="card" style="text-align:center;">';
+                    html += '<h3 style="color:#64748b;">المبلغ المطلوب</h3>';
+                    html += '<h1 style="color:#f59e0b; margin:10px 0;">25,000 د.ع</h1>';
+                    html += '<p style="color:#64748b; font-size:14px; margin-bottom:15px;">يرجى التحويل إلى سوبر كيو</p>';
+                    html += '<div style="background:#f0f2f5; padding:10px; border-radius:10px; margin-bottom:15px; font-weight:bold; letter-spacing:2px;">07701234567</div>';
+                    html += '<button class="btn-save" onclick="alert(&quot;تم نسخ الرقم!&quot;)">📋 انسخ الرقم</button>';
+                    html += '<button class="btn-save" style="background:#64748b; margin-top:10px;" onclick="alert(&quot;سيتم تاكيد الدفع من قبل الجابي&quot;)">✅ حوّلت المبلغ</button>';
+                    html += '</div>';
+                }
             }
+            // --- مدير المنصة ---
             else if (currentRole === 'admin') {
-                title.innerText = 'لوحة المنصة';
+                title.innerText = 'إحصائيات المنصة';
                 html += '<div class="card"><h3>إجمالي المولدات</h3><h1>1</h1></div>';
+                html += '<div class="card"><h3>إجمالي المشتركين (كل المولدات)</h3><h1>' + DB.subs.length + '</h1></div>';
             }
 
             content.innerHTML = html;
-            
-            // تلوين الزر النشط
-            var btns = document.querySelectorAll('.nav-btn');
-            for (var j = 0; j < btns.length; j++) {
-                btns[j].classList.remove('active');
-            }
         }
 
-        // --- الإضافة والحذف ---
         async function saveSub() {
             var name = document.getElementById('mName').value;
             var amps = document.getElementById('mAmps').value;
-            if (!name) {
-                alert('اكتب اسم المشترك');
-                return;
-            }
-            var res = await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '-' }]);
-            if (res.error) {
-                alert('خطأ: ' + res.error.message);
-            } else {
-                alert('تم الحفظ بنجاح!');
-                renderContent();
-            }
+            if (!name) return alert('اكتب الاسم');
+            await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '-' }]);
+            renderContent();
         }
 
         async function deleteSub(id) {
-            if (!confirm('هل أنت متأكد من الحذف؟')) return;
-            var res = await supabase.from('subscribers').delete().eq('id', id);
-            if (res.error) {
-                alert('خطأ في الحذف: ' + res.error.message);
-            } else {
-                renderContent();
-            }
+            if (!confirm('تأكيد الحذف؟')) return;
+            await supabase.from('subscribers').delete().eq('id', id);
+            renderContent();
+        }
+
+        async function paySub(subId, amount) {
+            if (!confirm('تأكيد استلام المبلغ؟')) return;
+            await supabase.from('payments').insert([{ sub_id: subId, amount: amount, method: 'cash', status: 'paid' }]);
+            alert('✅ تم تسجيل الدفع بنجاح!');
+            renderContent();
+        }
+
+        async function saveExpense() {
+            var type = document.getElementById('eType').value;
+            var amount = document.getElementById('eAmount').value;
+            if (!type || !amount) return alert('اكتب التفاصيل');
+            await supabase.from('expenses').insert([{ type: type, amount: amount, note: '-' }]);
+            renderContent();
         }
     </script>
 </body>

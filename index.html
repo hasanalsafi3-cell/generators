@@ -61,7 +61,7 @@
         .stat-box .status-btn { width: 100%; margin-top: 10px; padding: 15px; border-radius: 10px; border: none; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
 
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px;}
-        .modal-box { background: #1e293b; padding: 20px; border-radius: 15px; width: 100%; max-width: 350px; text-align: center; border-top: 4px solid #3b82f6;}
+        .modal-box { background: #1e293b; padding: 20px; border-radius: 15px; width: 100%; max-width: 350px; text-align: center; border-top: 4px solid #3b82f6; max-height: 90vh; overflow-y: auto;}
 
         .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .admin-card { background: #1e293b; padding: 15px; border-radius: 12px; text-align: center; border-top: 3px solid #eab308; }
@@ -157,12 +157,31 @@
         <div class="modal-box" style="border-top-color:#f59e0b;">
             <h3 style="color:#f59e0b; margin-bottom:15px;">تعديل بيانات المشترك</h3>
             <div class="input-group" style="text-align:right;">
+                <label>رقم الاشتراك:</label>
+                <input type="text" id="editSubNum" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
                 <label>اسم المشترك:</label>
                 <input type="text" id="editSubName" class="input-field">
             </div>
             <div class="input-group" style="text-align:right;">
                 <label>عدد الأمبير:</label>
                 <input type="number" id="editSubAmps" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>رقم الهاتف:</label>
+                <input type="text" id="editSubPhone" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>العنوان:</label>
+                <input type="text" id="editSubAddress" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>حالة الاشتراك:</label>
+                <select id="editSubStatus" class="input-field">
+                    <option value="active">نشط</option>
+                    <option value="suspended">موقوف</option>
+                </select>
             </div>
             <input type="hidden" id="editSubId">
             <button class="btn-save" style="margin-top:10px;" onclick="saveEditedSub()">حفظ التعديلات</button>
@@ -321,25 +340,41 @@
             renderOwnerHome();
         }
 
+        // شاشة المشتركين (تم تحديثها بالحقول الجديدة)
         async function renderSubsScreen() {
             await loadData(); 
             var html = '<div class="inner-screen"><h2>👥 المشتركين</h2>';
+            
             html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px;">';
+            html += '<div class="input-group"><input type="text" id="inpSubNum" class="input-field" placeholder="رقم الاشتراك (مثال: 1001)"></div>';
             html += '<div class="input-group"><input type="text" id="inpName" class="input-field" placeholder="اسم المشترك"></div>';
             html += '<div class="input-group"><input type="number" id="inpAmps" class="input-field" value="5" placeholder="الأمبير"></div>';
+            html += '<div class="input-group"><input type="text" id="inpPhone" class="input-field" placeholder="رقم الهاتف (07XXXXXXXXX)"></div>';
+            html += '<div class="input-group"><input type="text" id="inpAddress" class="input-field" placeholder="العنوان (المنطقة، الزقاق...)"></div>';
+            html += '<div class="input-group"><select id="inpStatus" class="input-field">';
+            html += '<option value="active">نشط</option><option value="suspended">موقوف</option>';
+            html += '</select></div>';
             html += '<button class="btn-save" onclick="addNewSub()">➕ إضافة مشترك</button>';
             html += '</div>';
             
-            html += '<div class="input-group"><input type="text" id="searchBar" class="input-field" placeholder="🔍 بحث عن مشترك بالاسم..." oninput="filterSubs()"></div>';
+            html += '<div class="input-group"><input type="text" id="searchBar" class="input-field" placeholder="🔍 بحث عن مشترك بالاسم أو رقم الاشتراك..." oninput="filterSubs()"></div>';
 
             if (DB.subs.length === 0) html += '<p style="text-align:center; color:#64748b;">لا يوجد مشتركين حالياً.</p>';
 
             html += '<div id="subs-list-container">';
             for (var i = 0; i < DB.subs.length; i++) {
                 var s = DB.subs[i];
-                html += '<div class="list-item sub-row" data-name="' + s.name + '"><div><b>' + s.name + '</b> (' + s.amps + ' أمبير)</div>';
+                var statusColor = s.status === 'suspended' ? '#ef4444' : '#10b981';
+                var statusText = s.status === 'suspended' ? 'موقوف' : 'نشط';
+                
+                html += '<div class="list-item sub-row" data-name="' + s.name + '" data-num="' + (s.sub_number || '') + '">';
+                html += '<div>';
+                html += '<b>' + (s.sub_number ? '#' + s.sub_number + ' - ' : '') + s.name + '</b> <span style="color:#94a3b8; font-size:12px;">(' + s.amps + ' أمبير)</span><br>';
+                html += '<span style="color:#94a3b8; font-size:12px;">📞 ' + (s.phone || 'لا يوجد') + ' | 📍 ' + (s.address || 'لا يوجد') + '</span><br>';
+                html += '<span style="color:' + statusColor + '; font-size:12px; font-weight:bold;">الحالة: ' + statusText + '</span>';
+                html += '</div>';
                 html += '<div style="display:flex; gap:5px; flex-wrap:wrap;">';
-                html += '<button class="btn-warning" onclick="openEditSub(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;, ' + s.amps + ')">تعديل ✏️</button>';
+                html += '<button class="btn-warning" onclick="openEditSub(&quot;' + s.id + '&quot;, &quot;' + (s.sub_number || '') + '&quot;, &quot;' + s.name + '&quot;, ' + s.amps + ', &quot;' + (s.phone || '') + '&quot;, &quot;' + (s.address || '') + '&quot;, &quot;' + (s.status || 'active') + '&quot;)">تعديل ✏️</button>';
                 html += '<button class="btn-blue" onclick="showQRCode(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">QR</button>';
                 html += '<button class="btn-danger" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف</button>';
                 html += '</div></div>';
@@ -353,35 +388,68 @@
             var rows = document.querySelectorAll('.sub-row');
             for (var i = 0; i < rows.length; i++) {
                 var name = rows[i].getAttribute('data-name').toLowerCase();
-                if (name.includes(query)) rows[i].style.display = 'flex';
+                var num = rows[i].getAttribute('data-num').toLowerCase();
+                if (name.includes(query) || num.includes(query)) rows[i].style.display = 'flex';
                 else rows[i].style.display = 'none';
             }
         }
 
         async function addNewSub() {
+            var subNum = document.getElementById('inpSubNum').value;
             var name = document.getElementById('inpName').value;
             var amps = document.getElementById('inpAmps').value;
-            if (!name || !amps) return alert('أدخل البيانات كاملة');
-            var res = await supabase.from('subscribers').insert([{ name: name, amps: parseInt(amps), phone: '-', user_id: currentUser.id, prev_debt: 0 }]);
+            var phone = document.getElementById('inpPhone').value;
+            var address = document.getElementById('inpAddress').value;
+            var status = document.getElementById('inpStatus').value;
+
+            if (!name || !amps) return alert('أدخل الاسم والأمبير على الأقل');
+            
+            var res = await supabase.from('subscribers').insert([{ 
+                sub_number: subNum,
+                name: name, 
+                amps: parseInt(amps), 
+                phone: phone || '-', 
+                address: address || '-',
+                status: status,
+                user_id: currentUser.id, 
+                prev_debt: 0 
+            }]);
+            
             if (res.error) alert('فشل الحفظ: ' + res.error.message);
             else { alert('✅ تم الإضافة بنجاح!'); renderSubsScreen(); }
         }
 
-        function openEditSub(id, name, amps) {
+        function openEditSub(id, subNum, name, amps, phone, address, status) {
             document.getElementById('editSubId').value = id;
+            document.getElementById('editSubNum').value = subNum;
             document.getElementById('editSubName').value = name;
             document.getElementById('editSubAmps').value = amps;
+            document.getElementById('editSubPhone').value = phone;
+            document.getElementById('editSubAddress').value = address;
+            document.getElementById('editSubStatus').value = status;
             document.getElementById('editSubModal').classList.remove('hidden');
         }
 
         async function saveEditedSub() {
             var id = document.getElementById('editSubId').value;
+            var subNum = document.getElementById('editSubNum').value;
             var name = document.getElementById('editSubName').value;
             var amps = document.getElementById('editSubAmps').value;
+            var phone = document.getElementById('editSubPhone').value;
+            var address = document.getElementById('editSubAddress').value;
+            var status = document.getElementById('editSubStatus').value;
             
             if (!name || !amps) return alert('أدخل البيانات كاملة');
             
-            var res = await supabase.from('subscribers').update({ name: name, amps: parseInt(amps) }).eq('id', id);
+            var res = await supabase.from('subscribers').update({ 
+                sub_number: subNum,
+                name: name, 
+                amps: parseInt(amps),
+                phone: phone,
+                address: address,
+                status: status
+            }).eq('id', id);
+            
             if (res.error) alert('فشل التعديل: ' + res.error.message);
             else { 
                 alert('✅ تم التعديل بنجاح!'); 
@@ -406,8 +474,12 @@
             document.getElementById('qrModal').classList.remove('hidden');
         }
 
-        // حساب الديون المعتمد على قاعدة البيانات
+        // دالة حساب الديون (محدثة لتتجاهل الموقوفين)
         function calculateSubDebts(s, price, currentMonth) {
+            if (s.status === 'suspended') {
+                return { currentMonthDue: 0, currentMonthRemaining: 0, prevDebt: 0, finalDue: 0 };
+            }
+
             var currentMonthDue = s.amps * price;
             var currentMonthPaid = 0;
 
@@ -447,14 +519,21 @@
                 var s = DB.subs[i];
                 var debts = calculateSubDebts(s, price, currentMonth);
                 
+                if (s.status === 'suspended') {
+                    html += '<div class="list-item" style="flex-direction:column; align-items:stretch; opacity: 0.6;">';
+                    html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>' + s.name + ' (موقوف)</b> <span style="color:#94a3b8; font-size:13px;">اشتراك موقوف</span></div>';
+                    html += '</div>';
+                    continue;
+                }
+                
                 html += '<div class="list-item" style="flex-direction:column; align-items:stretch;">';
-                html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>' + s.name + '</b> <span style="color:#94a3b8; font-size:13px;">فاتورة الشهر: ' + debts.currentMonthDue.toLocaleString() + '</span></div>';
+                html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>' + (s.sub_number ? '#' + s.sub_number + ' ' : '') + s.name + '</b> <span style="color:#94a3b8; font-size:13px;">فاتورة الشهر: ' + debts.currentMonthDue.toLocaleString() + '</span></div>';
                 
                 if(debts.prevDebt > 0) {
                     html += '<div style="color:#ef4444; font-size:13px; font-weight:bold; margin-bottom:5px;">⚠️ متأخرات سابقة: ' + debts.prevDebt.toLocaleString() + ' د.ع</div>';
                 }
 
-                html += '<div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;"><span style="color:#10b981;">مسدد هذا الشهر: ' + debts.currentMonthRemaining === 0 ? 'مكتمل' : (debts.currentMonthDue - debts.currentMonthRemaining).toLocaleString() + '</span> <span style="color:#ef4444;">الإجمالي المطلوب: ' + debts.finalDue.toLocaleString() + '</span></div>';
+                html += '<div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;"><span style="color:#10b981;">مسدد هذا الشهر: ' + (debts.currentMonthDue - debts.currentMonthRemaining).toLocaleString() + '</span> <span style="color:#ef4444;">الإجمالي المطلوب: ' + debts.finalDue.toLocaleString() + '</span></div>';
                 
                 html += '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
                 if (debts.finalDue > 0) {
@@ -492,7 +571,6 @@
             document.getElementById('historyModal').classList.remove('hidden');
         }
 
-        // دالة الدفع المعدلة لخصم الديون السابقة
         async function payInstallment(subId, finalDue) {
             var amountStr = prompt("الإجمالي المطلوب (شامل المتأخرات): " + finalDue.toLocaleString() + "\nأدخل المبلغ المستلم:", finalDue);
             if (amountStr === null) return;
@@ -511,7 +589,6 @@
             }
             var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
 
-            // كم مبلغ يذهب لسداد الديون القديمة؟
             var amountForDebt = Math.max(0, amount - currentMonthRemaining);
             var newPrevDebt = Math.max(0, Number(s.prev_debt || 0) - amountForDebt);
 
@@ -624,6 +701,8 @@
 
             for(var i=0; i<DB.subs.length; i++) {
                 var s = DB.subs[i];
+                if(s.status === 'suspended') continue;
+                
                 var debts = calculateSubDebts(s, price, currentMonth);
 
                 if(debts.finalDue > 0) {
@@ -685,7 +764,6 @@
             alert('تم حفظ الإعدادات بنجاح');
         }
 
-        // دالة ترحيل الديون (تم تعديلها لحفظ الديون في قاعدة البيانات)
         async function startNewMonth() {
             var newMonth = prompt("أدخل اسم الشهر الجديد (مثال: يونيو 2024):\nملاحظة: سيتم ترحيل ديون الشهر الحالي إلى الشهر الجديد.", "الشهر الجديد");
             if (!newMonth) return;
@@ -695,6 +773,8 @@
             
             for (var i = 0; i < DB.subs.length; i++) {
                 var s = DB.subs[i];
+                if(s.status === 'suspended') continue; // الموقوفين ما عليهم ديون جديدة
+                
                 var currentMonthDue = s.amps * price;
                 var currentMonthPaid = 0;
                 
@@ -708,11 +788,9 @@
                 var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
                 var newPrevDebt = Number(s.prev_debt || 0) + currentMonthRemaining;
 
-                // تحديث ديون المشترك في السحابة
                 await supabase.from('subscribers').update({ prev_debt: newPrevDebt }).eq('id', s.id);
             }
             
-            // تحديث اسم الشهر
             await supabase.from('settings').update({ current_month: newMonth }).eq('id', DB.settings.id);
             DB.settings.current_month = newMonth;
             
@@ -865,15 +943,19 @@
             
             html += '<div class="stat-box"><h4>فاتورة شهر (' + currentMonth + ')</h4><p style="font-size:14px; color:#94a3b8; margin-bottom:5px;">اشتراكك: ' + citizen.amps + ' أمبير</p>';
             
-            if(prevDebt > 0) {
-                html += '<p style="color:#ef4444; font-size:14px; margin-bottom:5px; font-weight:bold;">⚠️ لديك متأخرات سابقة: ' + prevDebt.toLocaleString() + ' د.ع</p>';
-            }
+            if(citizen.status === 'suspended') {
+                html += '<p style="color:#ef4444; font-size:20px; font-weight:bold; margin-top:15px;">⛔ اشتراكك موقوف حالياً</p>';
+            } else {
+                if(prevDebt > 0) {
+                    html += '<p style="color:#ef4444; font-size:14px; margin-bottom:5px; font-weight:bold;">⚠️ لديك متأخرات سابقة: ' + prevDebt.toLocaleString() + ' د.ع</p>';
+                }
 
-            html += '<p style="color:#f59e0b; font-size:28px; font-weight:bold;">' + finalDue.toLocaleString() + ' د.ع</p>';
-            if(finalDue > 0) { 
-                html += '<button class="btn-save" style="background:#3b82f6; margin-top:15px; font-size:18px;">💳 ادفع عبر سوبر كيو</button>'; 
-            } else { 
-                html += '<p style="color:#10b981; font-weight:bold; font-size:20px; margin-top:15px;">✅ مسدد بالكامل</p>'; 
+                html += '<p style="color:#f59e0b; font-size:28px; font-weight:bold;">' + finalDue.toLocaleString() + ' د.ع</p>';
+                if(finalDue > 0) { 
+                    html += '<button class="btn-save" style="background:#3b82f6; margin-top:15px; font-size:18px;">💳 ادفع عبر سوبر كيو</button>'; 
+                } else { 
+                    html += '<p style="color:#10b981; font-weight:bold; font-size:20px; margin-top:15px;">✅ مسدد بالكامل</p>'; 
+                }
             }
             html += '</div>';
 

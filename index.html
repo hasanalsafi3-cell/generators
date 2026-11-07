@@ -6,302 +6,95 @@
     <title>منصة إدارة المولدات</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        
-        body { 
-            background-color: #0b1120; 
-            color: #f8fafc; 
-            min-height: 100vh;
-            padding: 20px;
-            background-image: radial-gradient(circle at top right, #1e293b, #0b1120);
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0b1120; color: #f8fafc; min-height: 100vh; padding: 20px; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); }
+        .hidden { display: none !important; }
 
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 15px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-        .top-bar h1 { font-size: 24px; display: flex; align-items: center; gap: 10px; }
-        .user-info { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(30, 41, 59, 0.8); border-radius: 15px; margin-bottom: 30px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .top-bar h1 { font-size: 24px; }
+        .back-btn { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
 
-        .dashboard-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            align-items: flex-start;
-        }
-
-        .panel {
-            background: rgba(30, 41, 59, 0.6);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
-            width: 100%;
-            max-width: 380px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.4);
-        }
-
+        .dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; }
+        .panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; width: 100%; max-width: 380px; border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 8px 32px 0 rgba(0,0,0,0.4); }
         .panel.owner { border-top: 4px solid #f59e0b; }
         .panel.admin { border-top: 4px solid #eab308; }
         .panel.citizen { border-top: 4px solid #3b82f6; }
-
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .panel-header h2 { font-size: 22px; }
+        .panel-header h2 { font-size: 22px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
         .panel.owner .panel-header h2 { color: #f59e0b; }
         .panel.admin .panel-header h2 { color: #eab308; }
         .panel.citizen .panel-header h2 { color: #3b82f6; }
 
-        .card-item {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 12px 15px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .card-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-        
-        .card-text { text-align: right; width: 100%; }
+        .card-item { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 12px 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .card-item:hover { background: rgba(255, 255, 255, 0.1); }
         .card-text h4 { font-size: 15px; margin-bottom: 4px; color: #e2e8f0; }
-        .card-text p { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 5px; }
-        
+        .card-text p { font-size: 12px; color: #94a3b8; }
         .card-icon { font-size: 24px; margin-right: 15px; }
 
-        .badge-green { color: #10b981; font-weight: bold; font-size: 11px; }
-        .badge-red { color: #ef4444; font-weight: bold; font-size: 11px; }
-        .badge-gold { color: #eab308; font-weight: bold; font-size: 11px; }
-        .badge-blue { color: #3b82f6; font-weight: bold; font-size: 11px; }
-
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: #334155;
-            border-radius: 3px;
-            margin-top: 8px;
-            overflow: hidden;
-        }
-        .progress-fill {
-            height: 100%;
-            border-radius: 3px;
-        }
-        .fill-gold { background: #eab308; width: 75%; }
-        .fill-green { background: #10b981; width: 68%; }
-
-        .notif-wrapper { position: relative; }
-        .notif-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #ef4444;
-            color: white;
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 10px;
-        }
-
-        @media (max-width: 768px) {
-            .dashboard-grid { flex-direction: column; align-items: center; }
-            .panel { max-width: 100%; }
-            .top-bar { flex-direction: column; gap: 10px; text-align: center; }
-        }
+        /* تصميم شاشة المشتركين الداخلية */
+        .inner-screen { background: rgba(30, 41, 59, 0.9); border-radius: 20px; padding: 20px; max-width: 600px; margin: 0 auto; border-top: 4px solid #f59e0b; }
+        .inner-screen h2 { color: #f59e0b; margin-bottom: 20px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 14px; }
+        .input-field { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 16px; }
+        .btn-save { background: #10b981; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .sub-list-item { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+        .btn-del { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        
+        @media (max-width: 768px) { .dashboard-grid { flex-direction: column; align-items: center; } }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <h1>🔌 منصة إدارة المولدات</h1>
-        <div class="user-info">
-            <span>مرحباً، أحمد</span>
-            <span>👤</span>
-        </div>
+        <!-- زر الرجوع (مخفي في البداية) -->
+        <button id="backBtn" class="back-btn hidden" onclick="goBack()">↩ رجوع</button>
     </div>
 
-    <div class="dashboard-grid">
-
+    <!-- الشاشة الرئيسية (الداشبورد) -->
+    <div id="dashboard-view" class="dashboard-grid">
+        
         <!-- 1. صاحب المولد -->
         <div class="panel owner">
-            <div class="panel-header">
-                <h2>صاحب المولد ⚡</h2>
-            </div>
+            <div class="panel-header"><h2>صاحب المولد ⚡</h2></div>
             
-            <div class="card-item" onclick="goTo('لوحة التحكم الرئيسية')">
-                <div class="card-text">
-                    <h4>لوحة التحكم الرئيسية</h4>
-                    <p><span class="badge-green">مفعل</span> | 225V | الحمل: 68%</p>
-                </div>
+            <div class="card-item" onclick="goTo('لوحة التحكم')">
+                <div class="card-text"><h4>لوحة التحكم الرئيسية</h4><p>إحصائيات اليوم</p></div>
                 <div class="card-icon">📊</div>
             </div>
-
             <div class="card-item" onclick="goTo('إدارة المشتركين')">
-                <div class="card-text">
-                    <h4>إدارة المشتركين</h4>
-                    <p><span id="owner-subs-count">0</span> مشترك | إضافة مشترك</p>
-                </div>
+                <div class="card-text"><h4>إدارة المشتركين</h4><p><span id="owner-subs-count">0</span> مشترك مسجل</p></div>
                 <div class="card-icon">👥</div>
             </div>
-
-            <div class="card-item" onclick="goTo('إدارة المولد')">
-                <div class="card-text">
-                    <h4>إدارة المولد</h4>
-                    <p>الوقود: 75%</p>
-                    <div class="progress-bar"><div class="progress-fill fill-gold"></div></div>
-                    <p style="margin-top:5px;">ساعات التشغيل: 2150 س</p>
-                </div>
-                <div class="card-icon">⛽</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('سجل الصيانة')">
-                <div class="card-text">
-                    <h4>سجل الصيانة</h4>
-                    <p>آخر صيانة: 12/05/2024</p>
-                </div>
-                <div class="card-icon">🛠️</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('تسجيل الأعطال')">
-                <div class="card-text">
-                    <h4>تسجيل الأعطال</h4>
-                    <p>إبلاغ عن عطل</p>
-                </div>
-                <div class="card-icon">⚠️</div>
+            <div class="card-item" onclick="goTo('التحصيل')">
+                <div class="card-text"><h4>التحصيل والمدفوعات</h4><p>تسجيل استلام الكاش</p></div>
+                <div class="card-icon">💵</div>
             </div>
         </div>
 
         <!-- 2. مالك المنصة -->
         <div class="panel admin">
-            <div class="panel-header">
-                <h2>مالك المنصة 👑</h2>
-            </div>
-            
-            <div class="card-item" onclick="goTo('لوحة التحكم الرئيسية للمنصة')">
-                <div class="card-text">
-                    <h4>لوحة التحكم الرئيسية</h4>
-                    <p>المولدات: 120 | المشتركين: <span id="admin-subs-count">0</span></p>
-                    <p class="badge-gold">الإيرادات: <span id="admin-revenue-count">0 د.ع</span></p>
-                </div>
+            <div class="panel-header"><h2>مالك المنصة 👑</h2></div>
+            <div class="card-item" onclick="goTo('إحصائيات المنصة')">
+                <div class="card-text"><h4>لوحة التحكم الرئيسية</h4><p>المشتركين: <span id="admin-subs-count">0</span></p><p style="color:#eab308;">الإيرادات: <span id="admin-revenue-count">0 د.ع</span></p></div>
                 <div class="card-icon">📈</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('إدارة أصحاب المولدات')">
-                <div class="card-text">
-                    <h4>إدارة أصحاب المولدات</h4>
-                    <p>قائمة أصحاب المولدات</p>
-                </div>
-                <div class="card-icon">🏭</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('إدارة المواطنين')">
-                <div class="card-text">
-                    <h4>إدارة المواطنين</h4>
-                    <p>قائمة المشتركين</p>
-                </div>
-                <div class="card-icon">👥</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('التقارير والإحصائيات')">
-                <div class="card-text">
-                    <h4>التقارير والإحصائيات</h4>
-                    <p>تقارير الاستهلاك | تقارير الصيانة</p>
-                </div>
-                <div class="card-icon">📋</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('الإدارة المالية')">
-                <div class="card-text">
-                    <h4>الإدارة المالية والمدفوعات</h4>
-                    <p>تسوية الحسابات | الفواتير</p>
-                </div>
-                <div class="card-icon">💰</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('إعدادات المنصة')">
-                <div class="card-text">
-                    <h4>إعدادات المنصة والصلاحيات</h4>
-                </div>
-                <div class="card-icon">⚙️</div>
             </div>
         </div>
 
         <!-- 3. المواطن -->
         <div class="panel citizen">
-            <div class="panel-header">
-                <h2>المواطن 👤</h2>
-            </div>
-            
-            <div class="card-item" onclick="goTo('الرئيسية - حالة المولد')">
-                <div class="card-text">
-                    <h4>الرئيسية (حالة المولد والتجهيز)</h4>
-                    <p><span class="badge-green">✔️ يعمل</span> <span class="badge-red">✖️ متوقف</span></p>
-                    <p>ساعة: 5 ساعات | 1400h</p>
-                </div>
-                <div class="card-icon">🏠</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('الاشتراك والباقات')">
-                <div class="card-text">
-                    <h4>الاشتراك والباقات</h4>
-                    <p>بريميوم | تفاصيل الطاقة</p>
-                </div>
-                <div class="card-icon">💳</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('الفواتير والمدفوعات')">
-                <div class="card-text">
-                    <h4>الفواتير والمدفوعات</h4>
-                    <p class="badge-blue">55,000 د.ع</p>
-                    <p>الدفع الإلكتروني</p>
-                </div>
+            <div class="panel-header"><h2>المواطن 👤</h2></div>
+            <div class="card-item" onclick="goTo('فاتورتي')">
+                <div class="card-text"><h4>الفواتير والمدفوعات</h4><p>عرض الفاتورة الحالية</p></div>
                 <div class="card-icon">🧾</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('الشكاوى والدعم')">
-                <div class="card-text">
-                    <h4>الشكاوى والدعم</h4>
-                    <p>تقديم شكوى | مركز المساعدة</p>
-                </div>
-                <div class="card-icon">💬</div>
-            </div>
-
-            <div class="card-item" onclick="goTo('الإشعارات والتنبيهات')">
-                <div class="card-text">
-                    <h4>الإشعارات والتنبيهات</h4>
-                </div>
-                <div class="card-icon notif-wrapper">🔔<span class="notif-badge">3</span></div>
-            </div>
-
-            <div class="card-item" onclick="goTo('الملف الشخصي والإعدادات')">
-                <div class="card-text">
-                    <h4>الملف الشخصي والإعدادات</h4>
-                </div>
-                <div class="card-icon">👤</div>
             </div>
         </div>
 
     </div>
 
-    <!-- ربط ملف الجافاسكربت هنا -->
+    <!-- الشاشة الداخلية (تفتح لما تدوس على زر) -->
+    <div id="screen-view" class="hidden"></div>
+
     <script src="app.js"></script>
 </body>
 </html>

@@ -3,74 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مولدتي - النظام الشامل</title>
+    <title>مولدتي - نظام شامل</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: #f4f7fb; padding-bottom: 80px; color: #0f172a; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
+        body { background: #f4f7fb; padding-bottom: 80px; }
         .hidden { display: none !important; }
         
         /* شاشة الدخول */
-        .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; padding: 20px; }
-        .login-screen h1 { color: #0f172a; margin-bottom: 40px; font-size: 32px; }
-        .role-btn { width: 100%; max-width: 300px; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; cursor: pointer; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .role-btn.owner { background: #f59e0b; }
-        .role-btn.citizen { background: #3b82f6; }
-        .role-btn.admin { background: #1e293b; }
+        .login-screen { text-align: center; padding: 50px 20px; }
+        .login-screen h1 { color: #0f172a; margin-bottom: 30px; }
+        .btn-role { width: 100%; padding: 15px; margin-bottom: 10px; border: none; border-radius: 10px; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .btn-owner { background: #f59e0b; }
+        .btn-citizen { background: #3b82f6; }
+        .btn-admin { background: #1e293b; }
 
-        /* الشريط العلوي */
-        .top-bar { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
-        .top-bar h2 { font-size: 18px; }
-        .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-
-        /* المحتوى */
-        .content { padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .card h3 { font-size: 16px; color: #64748b; margin-bottom: 15px; }
-        .stat-num { font-size: 32px; font-weight: bold; color: #f59e0b; }
+        /* التطبيق */
+        .header { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
+        .header h3 { color: #0f172a; }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .content { padding: 15px; }
+        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        .btn-save { background: #10b981; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; }
         
-        /* المشتركين */
-        .sub-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-        .sub-info h4 { font-size: 16px; margin-bottom: 5px; }
-        .sub-info p { font-size: 13px; color: #64748b; }
-        .btn-danger { background: #fee2e2; color: #ef4444; border: none; padding: 8px; border-radius: 8px; cursor: pointer; }
-        .btn-add { background: #10b981; color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
-
-        /* الشريط السفلي */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #e2e8f0; z-index: 10; }
-        .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: bold; color: #94a3b8; cursor: pointer; gap: 4px; }
+        /* القائمة السفلية */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; }
+        .nav-btn { background: none; border: none; font-size: 12px; font-weight: bold; color: #64748b; cursor: pointer; }
         .nav-btn.active { color: #f59e0b; }
-        .nav-btn span { font-size: 20px; }
+        .nav-btn span { display: block; font-size: 20px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
+
     <!-- 1. شاشة الدخول -->
     <div id="loginScreen" class="login-screen">
         <h1>مرحباً بك 👋</h1>
-        <button class="role-btn owner" onclick="login('owner')">⚡ صاحب المولد</button>
-        <button class="role-btn citizen" onclick="login('citizen')">👤 المواطن</button>
-        <button class="role-btn admin" onclick="login('admin')">👑 مدير المنصة</button>
+        <button class="btn-role btn-owner" onclick="login('owner')">⚡ صاحب المولد</button>
+        <button class="btn-role btn-citizen" onclick="login('citizen')">👤 المواطن</button>
+        <button class="btn-role btn-admin" onclick="login('admin')">👑 مدير المنصة</button>
     </div>
 
     <!-- 2. شاشة التطبيق -->
     <div id="appScreen" class="hidden">
-        <div class="top-bar">
-            <h2 id="pageTitle">الرئيسية</h2>
-            <button class="logout-btn" onclick="logout()">خروج</button>
+        <div class="header">
+            <h3 id="pageTitle">الرئيسية</h3>
+            <button class="btn-logout" onclick="logout()">خروج</button>
         </div>
-
-        <!-- محتوى الصفحات (يتم تعبئته بالجافاسكربت) -->
+        
         <div class="content" id="mainContent"></div>
-
-        <!-- الشريط السفلي (يتم تعبئته بالجافاسكربت) -->
+        
         <div class="bottom-nav" id="bottomNav"></div>
     </div>
 
-    <!-- 3. نافذة الإضافة (Modal) -->
-    <div id="modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; padding: 20px;">
-        <div class="card" style="width: 100%; max-width: 400px; text-align: center;" id="modalContent"></div>
-    </div>
+    <script>
+        // --- إعدادات السحابة ---
+        var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+        var DB = { subs: [] };
+        var currentRole = '';
+        var currentTab = 'home';
 
-    <script src="app.js"></script>
+        // --- الدخول والخروج ---
+        function login(role) {
+            currentRole = role;
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            currentTab = 'home';
+            renderNav();
+            renderContent();
+        }
+
+        function logout() {
+            window.location.reload();
+        }
+
+        // --- التنقل ---
+        function navigate(tab) {
+            currentTab = tab;
+            renderNav();
+            renderContent();
+        }
+
+        function renderNav() {
+            var nav = document.getElementById('bottomNav');
+            var html = '';
+            if (currentRole === 'owner') {
+                html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>🏠</span>الرئيسية</button>';
+                html += '<button class="nav-btn" onclick="navigate(&quot;subs&quot;)"><span>👥</span>المشتركين</button>';
+                html += '<button class="nav-btn" onclick="navigate(&quot;collect&quot;)"><span>💵</span>التحصيل</button>';
+                html += '<button class="nav-btn" onclick="navigate(&quot;expenses&quot;)"><span>🧾</span>المصاريف</button>';
+                html += '<button class="nav-btn" onclick="navigate(&quot;settings&quot;)"><span>⚙️</span>الإعدادات</button>';
+            } else if (currentRole === 'citizen') {
+                html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>⚡</span>المولدة</button>';
+                html += '<button class="nav-btn" onclick="navigate(&quot;invoice&quot;)"><span>🧾</span>فاتورتي</button>';
+            } else if (currentRole === 'admin') {
+                html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>📊</span>الإحصائيات</button>';
+                html += '<button class="nav-btn" onclick="navigate(&quot;owners&quot;)"><span>🏭</span>المولدات</button>';
+            }
+            nav.innerHTML = html;
+        }
+
+        // --- رسم المحتوى ---
+        async function renderContent() {
+            var content = document.getElementById('mainContent');
+            var title = document.getElementById('pageTitle');
+            content.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
+
+            try {
+                var res = await supabase.from('subscribers').select('*');
+                if (res.data) DB.subs = res.data;
+            } catch(e) { console.log(e); }
+
+            var html = '';
+
+            if (currentRole === 'owner') {
+                if (currentTab === 'home') {
+                    title.innerText = 'لوحة التحكم';
+                    html += '<div class="card"><h3>عدد المشتركين</h3><h1 style="color:#f59e0b;">' + DB.subs.length + '</h1></div>';
+                    html += '<div class="card"><h3>المحصّل اليوم</h3><h1 style="color:#10b981;">0 د.ع</h1></div>';
+                } 
+                else if (currentTab === 'subs') {
+                    title.innerText = 'إدارة المشتركين';
+                    html += '<div class="card">';
+                    html += '<h3>إضافة مشترك</h3>';
+                    html += '<input type="text" id="mName" class="input" placeholder="اسم المشترك">';
+                    html += '<input type="number" id="mAmps" class="input" value="5" placeholder="الأمبير">';
+                    html += '<button class="btn-save" onclick="saveSub()">حفظ المشترك</button>';
+                    html += '</div>';
+
+                    html += '<div class="card"><h3>قائمة المشتركين</h3>';
+                    if (DB.subs.length === 0) html += '<p>لا يوجد مشتركين.</p>';
+                    for (var i = 0; i < DB.subs.length; i++) {
+                        var s = DB.subs[i];
+                        html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:10px 0;">';
+                        html += '<span><b>' + s.name + '</b> - ' + s.amps + ' أمبير</span>';
+                        html += '<button onclick="deleteSub(&quot;' + s.id + '&quot;)" style="background:#ef4444; color:white; border:none; padding:5px 10px; border-radius:5px;">حذف</button>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                }
+                else if (currentTab === 'collect') {
+                    title.innerText = 'التحصيل';
+                    html += '<div class="card"><h3>سجل الدفعات</h3><p>قريباً...</p></div>';
+                }
+                else if (currentTab === 'expenses') {
+                    title.innerText = 'المصاريف';
+                    html += '<div class="card"><h3>سجل المصاريف</h3><p>قريباً...</p></div>';
+                }
+                else if (currentTab === 'settings') {
+                    title.innerText = 'الإعدادات';
+                    html += '<div class="card"><h3>سعر الأمبير</h3><p>5000 د.ع</p></div>';
+                }
+            } 
+            else if (currentRole === 'citizen') {
+                title.innerText = 'واجهة المواطن';
+                html += '<div class="card" style="text-align:center;"><h1>⚡</h1><h3 style="color:#10b981;">المولدة شغالة</h3></div>';
+                if (currentTab === 'invoice') html += '<div class="card"><h3>فاتورة الشهر</h3><p>عليك: 25,000 د.ع</p></div>';
+            }
+            else if (currentRole === 'admin') {
+                title.innerText = 'لوحة المنصة';
+                html += '<div class="card"><h3>إجمالي المولدات</h3><h1>1</h1></div>';
+            }
+
+            content.innerHTML = html;
+            
+            // تلوين الزر النشط
+            var btns = document.querySelectorAll('.nav-btn');
+            for (var j = 0; j < btns.length; j++) {
+                btns[j].classList.remove('active');
+            }
+        }
+
+        // --- الإضافة والحذف ---
+        async function saveSub() {
+            var name = document.getElementById('mName').value;
+            var amps = document.getElementById('mAmps').value;
+            if (!name) {
+                alert('اكتب اسم المشترك');
+                return;
+            }
+            var res = await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '-' }]);
+            if (res.error) {
+                alert('خطأ: ' + res.error.message);
+            } else {
+                alert('تم الحفظ بنجاح!');
+                renderContent();
+            }
+        }
+
+        async function deleteSub(id) {
+            if (!confirm('هل أنت متأكد من الحذف؟')) return;
+            var res = await supabase.from('subscribers').delete().eq('id', id);
+            if (res.error) {
+                alert('خطأ في الحذف: ' + res.error.message);
+            } else {
+                renderContent();
+            }
+        }
+    </script>
 </body>
 </html>

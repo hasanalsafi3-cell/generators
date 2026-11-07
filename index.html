@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة إدارة المولدات</title>
-    <!-- كود الـ PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0b1120">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -13,7 +12,6 @@
         body { background-color: #0b1120; color: #f8fafc; min-height: 100vh; padding: 20px; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); padding-bottom: 50px;}
         .hidden { display: none !important; }
 
-        /* شاشة الدخول */
         .auth-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 90vh; }
         .auth-box { background: #1e293b; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-top: 4px solid #f59e0b; text-align: center;}
         .auth-box h2 { color: #f59e0b; margin-bottom: 20px; }
@@ -22,7 +20,6 @@
         .collector-btn { background: #f59e0b; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
         .auth-switch { color: #94a3b8; font-size: 14px; margin-top: 10px; cursor: pointer; text-decoration: underline; }
 
-        /* التطبيق */
         .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(30, 41, 59, 0.8); border-radius: 15px; margin-bottom: 30px; border: 1px solid rgba(255, 255, 255, 0.1); }
         .top-bar h1 { font-size: 24px; color: #f8fafc; }
         .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
@@ -66,7 +63,6 @@
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px;}
         .modal-box { background: #1e293b; padding: 20px; border-radius: 15px; width: 100%; max-width: 350px; text-align: center; border-top: 4px solid #3b82f6;}
 
-        /* تنسيقات لوحة المالك */
         .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .admin-card { background: #1e293b; padding: 15px; border-radius: 12px; text-align: center; border-top: 3px solid #eab308; }
         .admin-card h4 { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
@@ -90,7 +86,6 @@
 </head>
 <body>
 
-    <!-- 1. شاشة تسجيل الدخول -->
     <div id="authScreen" class="auth-screen hidden">
         <div class="auth-box">
             <h2 id="authTitle">تسجيل الدخول</h2>
@@ -103,7 +98,6 @@
         </div>
     </div>
 
-    <!-- 2. شاشة التطبيق -->
     <div id="appScreen" class="hidden">
         <div class="top-bar">
             <h1 id="mainTitle">🔌 منصة إدارة المولدات</h1>
@@ -114,7 +108,6 @@
         </div>
 
         <div id="dashboard-view" class="dashboard-grid">
-            <!-- صاحب المولد -->
             <div class="panel owner">
                 <div class="panel-header"><h2>صاحب المولد ⚡</h2></div>
                 <div class="card-item" onclick="openScreen('owner-home')"><div class="card-text"><h4>1. الرئيسية</h4></div><div class="card-icon">📊</div></div>
@@ -126,12 +119,10 @@
                 <div class="card-item" onclick="openScreen('owner-messages')"><div class="card-text"><h4>7. الرسائل والشكاوى</h4></div><div class="card-icon">💬</div></div>
                 <div class="card-item" onclick="openScreen('owner-settings')"><div class="card-text"><h4>8. الإعدادات</h4></div><div class="card-icon">⚙️</div></div>
             </div>
-            <!-- مالك المنصة -->
             <div class="panel admin">
                 <div class="panel-header"><h2>مالك المنصة 👑</h2></div>
                 <div class="card-item" onclick="openScreen('admin-home')"><div class="card-text"><h4>لوحة التحكم الشاملة</h4><p>إحصائيات، مولدات، إيرادات</p></div><div class="card-icon">📈</div></div>
             </div>
-            <!-- المواطن -->
             <div class="panel citizen">
                 <div class="panel-header"><h2>المواطن 👤</h2></div>
                 <div class="card-item" onclick="openScreen('citizen-invoice')"><div class="card-text"><h4>عرض الفاتورة (تجريبي)</h4></div><div class="card-icon">🧾</div></div>
@@ -415,6 +406,44 @@
             document.getElementById('qrModal').classList.remove('hidden');
         }
 
+        // دالة حساب الفواتير والمتأخرات (تم تعديلها)
+        function calculateSubDebts(s, price, currentMonth) {
+            var subDate = s.created_at ? new Date(s.created_at) : new Date();
+            var now = new Date();
+            
+            // حساب عدد الأشهر منذ إضافة المشترك
+            var monthsActive = (now.getFullYear() - subDate.getFullYear()) * 12 + (now.getMonth() - subDate.getMonth()) + 1;
+            if (monthsActive < 1) monthsActive = 1;
+
+            var totalExpected = monthsActive * s.amps * price;
+            var totalPaidAll = 0;
+            var currentMonthPaid = 0;
+
+            for (var j = 0; j < DB.payments.length; j++) {
+                if (DB.payments[j].sub_id === s.id) {
+                    totalPaidAll += Number(DB.payments[j].amount);
+                    var pMonth = DB.payments[j].billing_month || 'الشهر الحالي';
+                    if (pMonth === currentMonth) {
+                        currentMonthPaid += Number(DB.payments[j].amount);
+                    }
+                }
+            }
+
+            var currentMonthDue = s.amps * price;
+            var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
+            var totalRemaining = Math.max(0, totalExpected - totalPaidAll);
+            var prevDebt = Math.max(0, totalRemaining - currentMonthRemaining);
+            var finalDue = currentMonthRemaining + prevDebt;
+
+            return {
+                totalPaid: totalPaidAll,
+                currentMonthDue: currentMonthDue,
+                currentMonthRemaining: currentMonthRemaining,
+                prevDebt: prevDebt,
+                finalDue: finalDue
+            };
+        }
+
         async function renderInvoicesScreen() {
             await loadData();
             var price = DB.settings.price_per_amp;
@@ -428,32 +457,27 @@
             
             for (var i = 0; i < DB.subs.length; i++) {
                 var s = DB.subs[i];
-                var totalDue = s.amps * price;
-                var totalPaid = 0;
-                
-                for (var j = 0; j < DB.payments.length; j++) {
-                    var pMonth = DB.payments[j].billing_month || 'الشهر الحالي';
-                    if (DB.payments[j].sub_id === s.id && pMonth === currentMonth) {
-                        totalPaid += Number(DB.payments[j].amount);
-                    }
-                }
-                
-                var remaining = totalDue - totalPaid;
+                var debts = calculateSubDebts(s, price, currentMonth);
                 
                 html += '<div class="list-item" style="flex-direction:column; align-items:stretch;">';
-                html += '<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><b>' + s.name + '</b> <span style="color:#94a3b8; font-size:13px;">الإجمالي: ' + totalDue.toLocaleString() + '</span></div>';
-                html += '<div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;"><span style="color:#10b981;">المسدد: ' + totalPaid.toLocaleString() + '</span> <span style="color:#ef4444;">المتبقي: ' + remaining.toLocaleString() + '</span></div>';
+                html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b>' + s.name + '</b> <span style="color:#94a3b8; font-size:13px;">فاتورة الشهر: ' + debts.currentMonthDue.toLocaleString() + '</span></div>';
+                
+                if(debts.prevDebt > 0) {
+                    html += '<div style="color:#ef4444; font-size:13px; font-weight:bold; margin-bottom:5px;">⚠️ متأخرات سابقة: ' + debts.prevDebt.toLocaleString() + ' د.ع</div>';
+                }
+
+                html += '<div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;"><span style="color:#10b981;">المسدد: ' + debts.totalPaid.toLocaleString() + '</span> <span style="color:#ef4444;">الإجمالي المطلوب: ' + debts.finalDue.toLocaleString() + '</span></div>';
                 
                 html += '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
-                if (remaining > 0) {
-                    html += '<button class="btn-save" style="margin:0; flex:1; font-size:14px;" onclick="payInstallment(&quot;' + s.id + '&quot;, ' + remaining + ')">استلم دفعة</button>';
+                if (debts.finalDue > 0) {
+                    html += '<button class="btn-save" style="margin:0; flex:1; font-size:14px;" onclick="payInstallment(&quot;' + s.id + '&quot;, ' + debts.finalDue + ')">استلم دفعة</button>';
                 } else {
                     html += '<div style="flex:1; text-align:center; color:#10b981; font-weight:bold; padding-top:8px;">✅ مكتمل</div>';
                 }
                 
                 if(!isCollector) {
                     html += '<button class="btn-blue" style="font-size:14px;" onclick="showPaymentHistory(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">📜 السجل</button>';
-                    if (totalPaid > 0) {
+                    if (debts.totalPaid > 0) {
                         html += '<button class="btn-warning" style="flex:1; font-size:14px;" onclick="cancelLastPayment(&quot;' + s.id + '&quot;)">إلغاء آخر دفعة</button>';
                     }
                 }
@@ -480,11 +504,11 @@
             document.getElementById('historyModal').classList.remove('hidden');
         }
 
-        async function payInstallment(subId, remaining) {
-            var amountStr = prompt("المبلغ المتبقي: " + remaining.toLocaleString() + "\nأدخل المبلغ المستلم:", remaining);
+        async function payInstallment(subId, finalDue) {
+            var amountStr = prompt("الإجمالي المطلوب (شامل المتأخرات): " + finalDue.toLocaleString() + "\nأدخل المبلغ المستلم:", finalDue);
             if (amountStr === null) return;
             var amount = Number(amountStr);
-            if (isNaN(amount) || amount <= 0 || amount > remaining) return alert('مبلغ غير صحيح');
+            if (isNaN(amount) || amount <= 0 || amount > finalDue) return alert('مبلغ غير صحيح');
             
             var currentMonth = DB.settings.current_month || 'الشهر الحالي';
             
@@ -561,7 +585,7 @@
             
             html += '<div class="stat-box" style="border-top:2px solid #25D366;">';
             html += '<h4 style="color:#25D366;">📢 إشعار جماعي للمتأخرين</h4>';
-            html += '<p style="font-size:13px; color:#94a3b8; margin-bottom:10px;">سيتم تجهيز رسالة واتساب لكل مشترك لم يدفع بعد في الشهر الحالي.</p>';
+            html += '<p style="font-size:13px; color:#94a3b8; margin-bottom:10px;">سيتم تجهيز رسالة واتساب لكل مشترك لم يدفع بعد (شامل المتأخرات).</p>';
             html += '<button class="btn-green" style="width:100%;" onclick="broadcastToDebtors()">تجهيز الرسائل</button>';
             html += '<div id="broadcastList" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>';
             html += '</div>';
@@ -593,23 +617,17 @@
 
             for(var i=0; i<DB.subs.length; i++) {
                 var s = DB.subs[i];
-                var totalDue = s.amps * price;
-                var totalPaid = 0;
-                for(var j=0; j<DB.payments.length; j++) {
-                    var pMonth = DB.payments[j].billing_month || 'الشهر الحالي';
-                    if(DB.payments[j].sub_id === s.id && pMonth === currentMonth) totalPaid += Number(DB.payments[j].amount);
-                }
-                var remaining = totalDue - totalPaid;
+                var debts = calculateSubDebts(s, price, currentMonth);
 
-                if(remaining > 0) {
+                if(debts.finalDue > 0) {
                     count++;
-                    var msg = "مرحباً " + s.name + "،\nنذكركم بضرورة تسديد مبلغ " + remaining.toLocaleString() + " د.ع لشهر " + currentMonth + " لمولدة " + (DB.settings.generator_name || 'النور') + ".\nشكراً لتعاونكم.";
+                    var msg = "مرحباً " + s.name + "،\nنذكركم بضرورة تسديد مبلغ " + debts.finalDue.toLocaleString() + " د.ع (شامل المتأخرات إن وجدت) لمولدة " + (DB.settings.generator_name || 'النور') + ".\nشكراً لتعاونكم.";
                     var waUrl = "https://wa.me/?text=" + encodeURIComponent(msg);
-                    listDiv.innerHTML += '<div class="list-item" style="padding:10px; margin-top:5px;"><span>' + s.name + ' (متبقي ' + remaining + ')</span><a href="' + waUrl + '" target="_blank" class="btn-green" style="padding:5px 10px; font-size:12px;">إرسال</a></div>';
+                    listDiv.innerHTML += '<div class="list-item" style="padding:10px; margin-top:5px;"><span>' + s.name + ' (مطلوب ' + debts.finalDue + ')</span><a href="' + waUrl + '" target="_blank" class="btn-green" style="padding:5px 10px; font-size:12px;">إرسال</a></div>';
                 }
             }
             if(count === 0) {
-                listDiv.innerHTML = '<p style="text-align:center; color:#10b981; margin-top:10px;">كل المشتركين مسددين لهذا الشهر! 🎉</p>';
+                listDiv.innerHTML = '<p style="text-align:center; color:#10b981; margin-top:10px;">كل المشتركين مسددين! 🎉</p>';
             }
         }
 
@@ -661,12 +679,12 @@
         }
 
         async function startNewMonth() {
-            var newMonth = prompt("أدخل اسم الشهر الجديد (مثال: يونيو 2024):\nتحذير: سيتم تصفير فواتير جميع المشتركين للشهر الجديد.", "الشهر الجديد");
+            var newMonth = prompt("أدخل اسم الشهر الجديد (مثال: يونيو 2024):\nملاحظة: الديون السابقة راح تنتقل تلقائياً للشهر الجديد.", "الشهر الجديد");
             if (!newMonth) return;
             
             await supabase.from('settings').update({ current_month: newMonth }).eq('id', DB.settings.id);
             DB.settings.current_month = newMonth;
-            alert('✅ تم بدء شهر جديد: ' + newMonth + '\nجميع الفواتير الآن غير مسددة.');
+            alert('✅ تم بدء شهر جديد: ' + newMonth + '\nالفواتير صفرت، والمتأخرات محفوظة.');
             renderSettingsScreen();
         }
 
@@ -768,6 +786,7 @@
             innerView.innerHTML = html;
         }
 
+        // تحديث واجهة المواطن لتشمل المتأخرات
         async function renderCitizenInvoice() {
             var urlParams = new URLSearchParams(window.location.search);
             var citizenId = urlParams.get('citizen');
@@ -790,15 +809,29 @@
             var settings = resSet.data || { status: true, price_per_amp: 5000, owner_phone: '', work_hours: '', current_month: 'الشهر الحالي' };
             var currentMonth = settings.current_month || 'الشهر الحالي';
             
-            var totalDue = citizen.amps * settings.price_per_amp;
-            var totalPaid = 0;
+            // حساب الديون للمواطن
+            var subDate = citizen.created_at ? new Date(citizen.created_at) : new Date();
+            var now = new Date();
+            var monthsActive = (now.getFullYear() - subDate.getFullYear()) * 12 + (now.getMonth() - subDate.getMonth()) + 1;
+            if (monthsActive < 1) monthsActive = 1;
+
+            var totalExpected = monthsActive * citizen.amps * settings.price_per_amp;
+            var totalPaidAll = 0;
+            var currentMonthPaid = 0;
+
             if(resPays.data) { 
                 for(var j=0; j<resPays.data.length; j++) {
+                    totalPaidAll += Number(resPays.data[j].amount);
                     var pMonth = resPays.data[j].billing_month || 'الشهر الحالي';
-                    if(pMonth === currentMonth) totalPaid += Number(resPays.data[j].amount);
+                    if(pMonth === currentMonth) currentMonthPaid += Number(resPays.data[j].amount);
                 }
             }
-            var remaining = totalDue - totalPaid;
+
+            var currentMonthDue = citizen.amps * settings.price_per_amp;
+            var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
+            var totalRemaining = Math.max(0, totalExpected - totalPaidAll);
+            var prevDebt = Math.max(0, totalRemaining - currentMonthRemaining);
+            var finalDue = currentMonthRemaining + prevDebt;
 
             var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">🧾 أهلاً، ' + citizen.name + '</h2>';
             
@@ -811,8 +844,13 @@
             html += '<div class="stat-box"><h4>حالة المولدة</h4><p style="color:' + (settings.status ? '#10b981' : '#ef4444') + ';">' + (settings.status ? 'شغالة الآن ⚡' : 'مطفية حالياً 🔴') + '</p></div>';
             
             html += '<div class="stat-box"><h4>فاتورة شهر (' + currentMonth + ')</h4><p style="font-size:14px; color:#94a3b8; margin-bottom:5px;">اشتراكك: ' + citizen.amps + ' أمبير</p>';
-            html += '<p style="color:#f59e0b; font-size:28px; font-weight:bold;">' + remaining.toLocaleString() + ' د.ع</p>';
-            if(remaining > 0) { 
+            
+            if(prevDebt > 0) {
+                html += '<p style="color:#ef4444; font-size:14px; margin-bottom:5px; font-weight:bold;">⚠️ لديك متأخرات سابقة: ' + prevDebt.toLocaleString() + ' د.ع</p>';
+            }
+
+            html += '<p style="color:#f59e0b; font-size:28px; font-weight:bold;">' + finalDue.toLocaleString() + ' د.ع</p>';
+            if(finalDue > 0) { 
                 html += '<button class="btn-save" style="background:#3b82f6; margin-top:15px; font-size:18px;">💳 ادفع عبر سوبر كيو</button>'; 
             } else { 
                 html += '<p style="color:#10b981; font-weight:bold; font-size:20px; margin-top:15px;">✅ مسدد بالكامل</p>'; 

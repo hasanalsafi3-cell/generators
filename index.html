@@ -146,7 +146,7 @@
         </div>
     </div>
 
-    <!-- نافذة سجل الدفعات (جديد) -->
+    <!-- نافذة سجل الدفعات -->
     <div id="historyModal" class="modal hidden">
         <div class="modal-box" style="border-top-color:#10b981;">
             <h3 style="color:#10b981; margin-bottom:15px;" id="historyTitle">سجل الدفعات</h3>
@@ -155,9 +155,27 @@
         </div>
     </div>
 
+    <!-- نافذة تعديل المشترك (جديد) -->
+    <div id="editSubModal" class="modal hidden">
+        <div class="modal-box" style="border-top-color:#f59e0b;">
+            <h3 style="color:#f59e0b; margin-bottom:15px;">تعديل بيانات المشترك</h3>
+            <div class="input-group" style="text-align:right;">
+                <label>اسم المشترك:</label>
+                <input type="text" id="editSubName" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>عدد الأمبير:</label>
+                <input type="number" id="editSubAmps" class="input-field">
+            </div>
+            <input type="hidden" id="editSubId">
+            <button class="btn-save" style="margin-top:10px;" onclick="saveEditedSub()">حفظ التعديلات</button>
+            <button onclick="document.getElementById('editSubModal').classList.add('hidden')" class="btn-danger" style="width:100%;">إلغاء</button>
+        </div>
+    </div>
+
     <script>
         var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-        var DB = { subs: [], payments: [], expenses: [], complaints: [], settings: { price_per_amp: 5000, status: true, is_active: true } };
+        var DB = { subs: [], payments: [], expenses: [], complaints: [], settings: { price_per_amp: 5000, status: true, is_active: true, owner_phone: '', work_hours: '6:00 ص - 12:00 م' } };
         var currentUser = null;
         var isLoginMode = true;
 
@@ -213,7 +231,7 @@
                     return;
                 }
             } else {
-                var newSettings = { id: Math.floor(Math.random() * 100000), price_per_amp: 5000, status: true, is_active: true, email: currentUser.email, generator_name: 'مولد النور', user_id: currentUser.id };
+                var newSettings = { id: Math.floor(Math.random() * 100000), price_per_amp: 5000, status: true, is_active: true, email: currentUser.email, generator_name: 'مولد النور', user_id: currentUser.id, owner_phone: '07XXXXXXXXX', work_hours: '6:00 ص - 12:00 م' };
                 await supabase.from('settings').insert([newSettings]);
                 DB.settings = newSettings;
             }
@@ -221,7 +239,7 @@
             var resSubs = await supabase.from('subscribers').select('*').eq('user_id', currentUser.id);
             var resPays = await supabase.from('payments').select('*').eq('user_id', currentUser.id);
             var resExp = await supabase.from('expenses').select('*').eq('user_id', currentUser.id);
-            var resComp = await supabase.from('complaints').select('*').eq('user_id', currentUser.id); // شكاوى خاصة بهذا المالك
+            var resComp = await supabase.from('complaints').select('*').eq('user_id', currentUser.id);
             
             if (resSubs.data) DB.subs = resSubs.data;
             if (resPays.data) DB.payments = resPays.data;
@@ -284,7 +302,6 @@
             renderOwnerHome();
         }
 
-        // الميزة الجديدة: شريط البحث
         async function renderSubsScreen() {
             await loadData(); 
             var html = '<div class="inner-screen"><h2>👥 المشتركين</h2>';
@@ -294,7 +311,6 @@
             html += '<button class="btn-save" onclick="addNewSub()">➕ إضافة مشترك</button>';
             html += '</div>';
             
-            // شريط البحث الجديد
             html += '<div class="input-group"><input type="text" id="searchBar" class="input-field" placeholder="🔍 بحث عن مشترك بالاسم..." oninput="filterSubs()"></div>';
 
             if (DB.subs.length === 0) html += '<p style="text-align:center; color:#64748b;">لا يوجد مشتركين حالياً.</p>';
@@ -303,8 +319,9 @@
             for (var i = 0; i < DB.subs.length; i++) {
                 var s = DB.subs[i];
                 html += '<div class="list-item sub-row" data-name="' + s.name + '"><div><b>' + s.name + '</b> (' + s.amps + ' أمبير)</div>';
-                html += '<div style="display:flex; gap:5px;">';
-                html += '<button class="btn-blue" onclick="showQRCode(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">QR / واتساب</button>';
+                html += '<div style="display:flex; gap:5px; flex-wrap:wrap;">';
+                html += '<button class="btn-warning" onclick="openEditSub(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;, ' + s.amps + ')">تعديل ✏️</button>';
+                html += '<button class="btn-blue" onclick="showQRCode(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">QR</button>';
                 html += '<button class="btn-danger" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف</button>';
                 html += '</div></div>';
             }
@@ -312,7 +329,6 @@
             document.getElementById('inner-view').innerHTML = html;
         }
 
-        // دالة الفلترة للبحث
         function filterSubs() {
             var query = document.getElementById('searchBar').value.toLowerCase();
             var rows = document.querySelectorAll('.sub-row');
@@ -332,6 +348,31 @@
             else { alert('✅ تم الإضافة بنجاح!'); renderSubsScreen(); }
         }
 
+        // دالة فتح نافذة التعديل
+        function openEditSub(id, name, amps) {
+            document.getElementById('editSubId').value = id;
+            document.getElementById('editSubName').value = name;
+            document.getElementById('editSubAmps').value = amps;
+            document.getElementById('editSubModal').classList.remove('hidden');
+        }
+
+        // دالة حفظ التعديل
+        async function saveEditedSub() {
+            var id = document.getElementById('editSubId').value;
+            var name = document.getElementById('editSubName').value;
+            var amps = document.getElementById('editSubAmps').value;
+            
+            if (!name || !amps) return alert('أدخل البيانات كاملة');
+            
+            var res = await supabase.from('subscribers').update({ name: name, amps: parseInt(amps) }).eq('id', id);
+            if (res.error) alert('فشل التعديل: ' + res.error.message);
+            else { 
+                alert('✅ تم التعديل بنجاح!'); 
+                document.getElementById('editSubModal').classList.add('hidden');
+                renderSubsScreen(); 
+            }
+        }
+
         async function deleteSub(id) {
             if (!confirm('تأكيد الحذف؟')) return;
             await supabase.from('subscribers').delete().eq('id', id);
@@ -348,7 +389,6 @@
             document.getElementById('qrModal').classList.remove('hidden');
         }
 
-        // الميزة الجديدة: سجل الدفعات
         async function renderInvoicesScreen() {
             await loadData();
             var price = DB.settings.price_per_amp;
@@ -373,7 +413,6 @@
                 } else {
                     html += '<div style="flex:1; text-align:center; color:#10b981; font-weight:bold; padding-top:8px;">✅ مكتمل</div>';
                 }
-                // زر السجل الجديد
                 html += '<button class="btn-blue" style="font-size:14px;" onclick="showPaymentHistory(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">📜 السجل</button>';
 
                 if (totalPaid > 0) {
@@ -385,7 +424,6 @@
             document.getElementById('inner-view').innerHTML = html;
         }
 
-        // دالة عرض سجل الدفعات
         function showPaymentHistory(subId, name) {
             document.getElementById('historyTitle').innerText = 'سجل دفعات: ' + name;
             var content = '';
@@ -463,13 +501,21 @@
             document.getElementById('inner-view').innerHTML = html;
         }
 
-        // الميزة الجديدة: عرض الشكاوى الواردة
-        function renderMessagesScreen() {
+        // تحديث شاشة الرسائل (إضافة الإشعار الجماعي)
+        async function renderMessagesScreen() {
+            await loadData();
             var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">💬 الرسائل والشكاوى</h2>';
-            html += '<div class="input-group"><textarea class="input-field" rows="3" placeholder="اكتب رسالة عامة..."></textarea></div>';
-            html += '<button class="btn-save" onclick="alert(\'تم إرسال الرسالة\')">📤 إرسال رسالة</button>';
             
-            html += '<h3 style="margin-top:20px; margin-bottom:10px; color:#94a3b8;">📥 الشكاوى الواردة من المواطنين</h3>';
+            // قسم الإشعار الجماعي الجديد
+            html += '<div class="stat-box" style="border-top:2px solid #25D366;">';
+            html += '<h4 style="color:#25D366;">📢 إشعار جماعي للمتأخرين</h4>';
+            html += '<p style="font-size:13px; color:#94a3b8; margin-bottom:10px;">سيتم تجهيز رسالة واتساب لكل مشترك لم يدفع بعد.</p>';
+            html += '<button class="btn-green" style="width:100%;" onclick="broadcastToDebtors()">تجهيز الرسائل</button>';
+            html += '<div id="broadcastList" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>';
+            html += '</div>';
+
+            // قسم الشكاوى
+            html += '<h3 style="margin-top:20px; margin-bottom:10px; color:#94a3b8;">📥 الشكاوى الواردة</h3>';
             if(DB.complaints.length === 0) {
                 html += '<p style="text-align:center; color:#64748b;">لا يوجد شكاوى واردة.</p>';
             } else {
@@ -487,29 +533,76 @@
             document.getElementById('inner-view').innerHTML = html;
         }
 
+        // دالة الإشعار الجماعي
+        function broadcastToDebtors() {
+            var listDiv = document.getElementById('broadcastList');
+            listDiv.innerHTML = '';
+            var price = DB.settings.price_per_amp;
+            var count = 0;
+
+            for(var i=0; i<DB.subs.length; i++) {
+                var s = DB.subs[i];
+                var totalDue = s.amps * price;
+                var totalPaid = 0;
+                for(var j=0; j<DB.payments.length; j++) {
+                    if(DB.payments[j].sub_id === s.id) totalPaid += Number(DB.payments[j].amount);
+                }
+                var remaining = totalDue - totalPaid;
+
+                if(remaining > 0) {
+                    count++;
+                    var msg = "مرحباً " + s.name + "،\nنذكركم بضرورة تسديد مبلغ " + remaining.toLocaleString() + " د.ع لمولدة " + (DB.settings.generator_name || 'النور') + ".\nشكراً لتعاونكم.";
+                    var waUrl = "https://wa.me/?text=" + encodeURIComponent(msg);
+                    listDiv.innerHTML += '<div class="list-item" style="padding:10px; margin-top:5px;"><span>' + s.name + '</span><a href="' + waUrl + '" target="_blank" class="btn-green" style="padding:5px 10px; font-size:12px;">إرسال</a></div>';
+                }
+            }
+            if(count === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; color:#10b981; margin-top:10px;">كل المشتركين مسددين! لا يوجد متأخرات 🎉</p>';
+            }
+        }
+
         async function resolveComplaint(id) {
             await supabase.from('complaints').delete().eq('id', id);
             renderMessagesScreen();
         }
 
+        // تحديث الإعدادات (إضافة الهاتف وأوقات العمل)
         async function renderSettingsScreen() {
             var html = '<div class="inner-screen"><h2>⚙️ الإعدادات</h2>';
+            html += '<div class="input-group"><label>اسم المولدة:</label><input type="text" id="inpGenName" class="input-field" value="' + (DB.settings.generator_name || '') + '"></div>';
+            html += '<div class="input-group"><label>رقم هاتف صاحب المولدة:</label><input type="text" id="inpOwnerPhone" class="input-field" value="' + (DB.settings.owner_phone || '') + '"></div>';
+            html += '<div class="input-group"><label>أوقات العمل:</label><input type="text" id="inpWorkHours" class="input-field" value="' + (DB.settings.work_hours || '') + '"></div>';
             html += '<div class="input-group"><label>سعر الأمبير:</label><input type="number" id="inpPrice" class="input-field" value="' + DB.settings.price_per_amp + '"></div>';
             html += '<button class="btn-save" onclick="saveSettings()">حفظ</button></div>';
             document.getElementById('inner-view').innerHTML = html;
         }
 
         async function saveSettings() {
+            var newName = document.getElementById('inpGenName').value;
+            var newPhone = document.getElementById('inpOwnerPhone').value;
+            var newHours = document.getElementById('inpWorkHours').value;
             var newPrice = document.getElementById('inpPrice').value;
-            await supabase.from('settings').update({ price_per_amp: newPrice }).eq('id', DB.settings.id);
+            
+            await supabase.from('settings').update({ 
+                generator_name: newName,
+                owner_phone: newPhone,
+                work_hours: newHours,
+                price_per_amp: newPrice 
+            }).eq('id', DB.settings.id);
+            
+            DB.settings.generator_name = newName;
+            DB.settings.owner_phone = newPhone;
+            DB.settings.work_hours = newHours;
             DB.settings.price_per_amp = newPrice;
-            alert('تم الحفظ');
+            
+            alert('تم حفظ الإعدادات بنجاح');
         }
 
         // ==========================================
         // 2. لوحة مالك المنصة
         // ==========================================
         async function renderAdminHome() {
+            // ... (نفس الكود السابق بدون تغيير) ...
             var innerView = document.getElementById('inner-view');
             innerView.innerHTML = '<div class="inner-screen" style="border-top-color:#eab308;"><h2 style="color:#eab308;">👑 لوحة المالك</h2><p style="text-align:center;">جاري جلب الإحصائيات...</p></div>';
 
@@ -608,7 +701,7 @@
         }
 
         // ==========================================
-        // 3. واجهة المواطن (مع إضافة الشكاوى)
+        // 3. واجهة المواطن (تتضمن الإعدادات والشكاوى)
         // ==========================================
         async function renderCitizenInvoice() {
             var urlParams = new URLSearchParams(window.location.search);
@@ -629,13 +722,21 @@
             var resSet = await supabase.from('settings').select('*').eq('user_id', citizen.user_id).single(); 
             var resPays = await supabase.from('payments').select('*').eq('sub_id', citizenId);
 
-            var settings = resSet.data || { status: true, price_per_amp: 5000 };
+            var settings = resSet.data || { status: true, price_per_amp: 5000, owner_phone: '', work_hours: '' };
             var totalDue = citizen.amps * settings.price_per_amp;
             var totalPaid = 0;
             if(resPays.data) { for(var j=0; j<resPays.data.length; j++) totalPaid += Number(resPays.data[j].amount); }
             var remaining = totalDue - totalPaid;
 
             var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">🧾 أهلاً، ' + citizen.name + '</h2>';
+            
+            // عرض معلومات المولدة الحقيقية
+            html += '<div class="stat-box" style="background:#1e293b;">';
+            html += '<h4>اسم المولدة: <span style="color:#3b82f6;">' + (settings.generator_name || 'النور') + '</span></h4>';
+            html += '<p style="font-size:13px; color:#94a3b8; margin-top:5px;">أوقات العمل: ' + (settings.work_hours || 'غير محددة') + '</p>';
+            html += '<p style="font-size:13px; color:#94a3b8;">رقم المولدة: ' + (settings.owner_phone || 'غير متوفر') + '</p>';
+            html += '</div>';
+
             html += '<div class="stat-box"><h4>حالة المولدة</h4><p style="color:' + (settings.status ? '#10b981' : '#ef4444') + ';">' + (settings.status ? 'شغالة الآن ⚡' : 'مطفية حالياً 🔴') + '</p></div>';
             html += '<div class="stat-box"><h4>فاتورتك الحالية</h4><p style="font-size:14px; color:#94a3b8; margin-bottom:5px;">اشتراكك: ' + citizen.amps + ' أمبير</p>';
             html += '<p style="color:#f59e0b; font-size:28px; font-weight:bold;">' + remaining.toLocaleString() + ' د.ع</p>';
@@ -646,10 +747,9 @@
             }
             html += '</div>';
 
-            // الميزة الجديدة: إرسال الشكوى
             html += '<div class="stat-box" style="margin-top:20px; border-top:2px solid #ef4444;">';
             html += '<h4 style="color:#ef4444;">تقديم شكوى</h4>';
-            html += '<textarea id="complaintText" class="input-field" rows="3" placeholder="اكتب شكواك هنا (مثلاً: المولدة مطفية منذ ساعتين)..."></textarea>';
+            html += '<textarea id="complaintText" class="input-field" rows="3" placeholder="اكتب شكواك هنا..."></textarea>';
             html += '<button class="btn-save" style="background:#ef4444; margin-top:10px;" onclick="sendComplaint(&quot;' + citizen.id + '&quot;, &quot;' + citizen.user_id + '&quot;, &quot;' + citizen.name + '&quot;)">📢 إرسال الشكوى</button>';
             html += '</div>';
 
@@ -657,7 +757,6 @@
             document.getElementById('inner-view').innerHTML = html;
         }
 
-        // دالة إرسال الشكوى
         async function sendComplaint(citizenId, userId, citizenName) {
             var text = document.getElementById('complaintText').value;
             if(!text) return alert('يرجى كتابة نص الشكوى أولاً.');

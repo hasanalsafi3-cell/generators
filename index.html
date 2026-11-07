@@ -35,7 +35,7 @@
         .card-icon { font-size: 24px; margin-right: 15px; }
 
         /* شاشات داخلية */
-        .inner-screen { background: rgba(30, 41, 59, 0.95); border-radius: 20px; padding: 20px; max-width: 600px; margin: 0 auto; border-top: 4px solid #f59e0b; }
+        .inner-screen { background: rgba(30, 41, 59, 0.95); border-radius: 20px; padding: 20px; max-width: 600px; margin: 0 auto; border-top: 4px solid #f59e0b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .inner-screen h2 { color: #f59e0b; margin-bottom: 20px; font-size: 22px;}
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 14px; }
@@ -44,6 +44,9 @@
         .btn-danger { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;}
         
         .list-item { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+        .stat-box { background:#1e293b; padding:15px; border-radius:10px; text-align:center; margin-bottom:10px;}
+        .stat-box h4 { color:#94a3b8; font-size:14px; margin-bottom:5px;}
+        .stat-box p { color:#f8fafc; font-size:20px; font-weight:bold;}
 
         @media (max-width: 768px) { .dashboard-grid { flex-direction: column; align-items: center; } }
     </style>
@@ -59,39 +62,40 @@
     <!-- الشاشة الرئيسية (الأعمدة الثلاثة) -->
     <div id="dashboard-view" class="dashboard-grid">
         
-        <!-- 1. صاحب المولد -->
+        <!-- 1. صاحب المولد (8 أقسام) -->
         <div class="panel owner">
             <div class="panel-header"><h2>صاحب المولد ⚡</h2></div>
             
             <div class="card-item" onclick="openScreen('owner-home')">
-                <div class="card-text">
-                    <h4>لوحة التحكم الرئيسية</h4>
-                    <p>إحصائيات اليوم</p>
-                </div>
+                <div class="card-text"><h4>1. الرئيسية</h4><p>حالة المولد، إيرادات، تنبيهات</p></div>
                 <div class="card-icon">📊</div>
             </div>
-
             <div class="card-item" onclick="openScreen('owner-subs')">
-                <div class="card-text">
-                    <h4>إدارة المشتركين</h4>
-                    <p>إضافة / حذف المشتركين</p>
-                </div>
+                <div class="card-text"><h4>2. إدارة المشتركين</h4><p>إضافة، تعديل، حالة الاشتراك</p></div>
                 <div class="card-icon">👥</div>
             </div>
-
-            <div class="card-item" onclick="openScreen('owner-collect')">
-                <div class="card-text">
-                    <h4>التحصيل والمدفوعات</h4>
-                    <p>تسجيل استلام الكاش</p>
-                </div>
+            <div class="card-item" onclick="openScreen('owner-invoices')">
+                <div class="card-text"><h4>3. الفواتير والتحصيل</h4><p>مدفوعات، متأخرات، سجل التحصيل</p></div>
                 <div class="card-icon">💵</div>
             </div>
-
-            <div class="card-item" onclick="openScreen('owner-gen')">
-                <div class="card-text">
-                    <h4>إدارة المولد</h4>
-                    <p>الوقود، ساعات التشغيل، الصيانة</p>
-                </div>
+            <div class="card-item" onclick="openScreen('owner-generator')">
+                <div class="card-text"><h4>4. إدارة المولد</h4><p>القدرة، الساعات، الحرارة، الزيت</p></div>
+                <div class="card-icon">⚙️</div>
+            </div>
+            <div class="card-item" onclick="openScreen('owner-fuel')">
+                <div class="card-text"><h4>5. الوقود</h4><p>تعبئة، استهلاك، تكلفة، كمية متبقية</p></div>
+                <div class="card-icon">⛽</div>
+            </div>
+            <div class="card-item" onclick="openScreen('owner-reports')">
+                <div class="card-text"><h4>6. التقارير</h4><p>يومي، شهري، إيرادات، أرباح</p></div>
+                <div class="card-icon">📈</div>
+            </div>
+            <div class="card-item" onclick="openScreen('owner-messages')">
+                <div class="card-text"><h4>7. الرسائل</h4><p>إشعارات، انقطاع الكهرباء، صيانة</p></div>
+                <div class="card-icon">💬</div>
+            </div>
+            <div class="card-item" onclick="openScreen('owner-settings')">
+                <div class="card-text"><h4>8. الإعدادات</h4><p>التسعيرة، أوقات التشغيل، حسابك</p></div>
                 <div class="card-icon">⚙️</div>
             </div>
         </div>
@@ -99,36 +103,18 @@
         <!-- 2. مالك المنصة -->
         <div class="panel admin">
             <div class="panel-header"><h2>مالك المنصة 👑</h2></div>
-            
             <div class="card-item" onclick="openScreen('admin-home')">
                 <div class="card-text">
                     <h4>لوحة التحكم الرئيسية</h4>
-                    <p>المولدات: 120 | المشتركين: <span id="admin-subs-count">0</span></p>
+                    <p>المشتركين: <span id="admin-subs-count">0</span></p>
                 </div>
                 <div class="card-icon">📈</div>
-            </div>
-
-            <div class="card-item" onclick="openScreen('admin-owners')">
-                <div class="card-text">
-                    <h4>إدارة أصحاب المولدات</h4>
-                    <p>قائمة أصحاب المولدات</p>
-                </div>
-                <div class="card-icon">🏭</div>
             </div>
         </div>
 
         <!-- 3. المواطن -->
         <div class="panel citizen">
             <div class="panel-header"><h2>المواطن 👤</h2></div>
-            
-            <div class="card-item" onclick="openScreen('citizen-home')">
-                <div class="card-text">
-                    <h4>الرئيسية (حالة المولد)</h4>
-                    <p>ساعة: 5 ساعات | يعمل</p>
-                </div>
-                <div class="card-icon">🏠</div>
-            </div>
-
             <div class="card-item" onclick="openScreen('citizen-invoice')">
                 <div class="card-text">
                     <h4>الفواتير والمدفوعات</h4>
@@ -146,21 +132,25 @@
     <script>
         // 1. إعداد السحابة
         var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-        var DB = { subs: [], payments: [] };
+        var DB = { subs: [], payments: [], expenses: [] };
+        var pricePerAmp = 5000;
 
-        // 2. تحميل البيانات وتحديث العداد
+        // 2. تحميل البيانات
         async function loadData() {
             var resSubs = await supabase.from('subscribers').select('*');
             var resPays = await supabase.from('payments').select('*');
+            var resExp = await supabase.from('expenses').select('*');
+            
             if (resSubs.data) DB.subs = resSubs.data;
             if (resPays.data) DB.payments = resPays.data;
+            if (resExp.data) DB.expenses = resExp.data;
             
             if(document.getElementById('admin-subs-count')) {
                 document.getElementById('admin-subs-count').innerText = DB.subs.length;
             }
         }
 
-        // 3. التنقل بين الشاشات
+        // 3. التنقل
         function openScreen(screenName) {
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('backBtn').classList.remove('hidden');
@@ -170,15 +160,16 @@
             innerView.classList.remove('hidden');
             innerView.innerHTML = '<div class="inner-screen"><p style="text-align:center;">جاري التحميل...</p></div>';
 
-            if (screenName === 'owner-subs') renderSubsScreen();
-            else if (screenName === 'owner-collect') renderCollectScreen();
-            else if (screenName === 'owner-home') renderOwnerHome();
-            else if (screenName === 'owner-gen') renderGenControl();
+            if (screenName === 'owner-home') renderOwnerHome();
+            else if (screenName === 'owner-subs') renderSubsScreen();
+            else if (screenName === 'owner-invoices') renderInvoicesScreen();
+            else if (screenName === 'owner-generator') renderGeneratorScreen();
+            else if (screenName === 'owner-fuel') renderFuelScreen();
+            else if (screenName === 'owner-reports') renderReportsScreen();
+            else if (screenName === 'owner-messages') renderMessagesScreen();
+            else if (screenName === 'owner-settings') renderSettingsScreen();
             else if (screenName === 'admin-home') renderAdminHome();
             else if (screenName === 'citizen-invoice') renderCitizenInvoice();
-            else {
-                innerView.innerHTML = '<div class="inner-screen"><h2>قيد التطوير</h2><p style="text-align:center;">هذه الشاشة ستضاف قريباً.</p></div>';
-            }
         }
 
         function goBack() {
@@ -186,35 +177,47 @@
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('backBtn').classList.add('hidden');
             document.getElementById('mainTitle').innerText = '🔌 منصة إدارة المولدات';
-            loadData(); // تحديث الأرقام عند الرجوع
+            loadData(); 
         }
 
         // ==========================================
-        // 4. شاشات صاحب المولد
+        // 4. شاشات صاحب المولد (8 أقسام)
         // ==========================================
 
-        // أ. شاشة المشتركين
+        // 1. الرئيسية
+        async function renderOwnerHome() {
+            await loadData();
+            var total = 0;
+            for(var i=0; i<DB.payments.length; i++){ total += Number(DB.payments[i].amount); }
+            
+            var html = '<div class="inner-screen">';
+            html += '<h2>📊 لوحة التحكم</h2>';
+            html += '<div class="stat-box"><h4>حالة المولد</h4><p style="color:#10b981;">يعمل ⚡</p></div>';
+            html += '<div class="stat-box"><h4>ساعات التشغيل اليوم</h4><p>12 ساعة</p></div>';
+            html += '<div class="stat-box"><h4>مستوى الوقود</h4><p style="color:#eab308;">75%</p></div>';
+            html += '<div class="stat-box"><h4>عدد المشتركين</h4><p>' + DB.subs.length + '</p></div>';
+            html += '<div class="stat-box"><h4>إجمالي الإيرادات</h4><p style="color:#10b981;">' + total.toLocaleString() + ' د.ع</p></div>';
+            html += '<div class="stat-box" style="background:#ef4444;"><h4 style="color:white;">التنبيهات السريعة</h4><p style="color:white; font-size:14px;">لا توجد أعطال حالياً</p></div>';
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        // 2. إدارة المشتركين
         async function renderSubsScreen() {
             await loadData();
             var html = '<div class="inner-screen">';
             html += '<h2>👥 إدارة المشتركين</h2>';
-            
-            // نموذج الإضافة
             html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px;">';
-            html += '<div class="input-group"><label>اسم المشترك:</label><input type="text" id="inpName" class="input-field" placeholder="أدخل اسم المشترك"></div>';
-            html += '<div class="input-group"><label>عدد الأمبير:</label><input type="number" id="inpAmps" class="input-field" value="5"></div>';
-            html += '<button class="btn-save" onclick="addNewSub()">➕ إضافة المشترك للسحابة</button>';
+            html += '<div class="input-group"><input type="text" id="inpName" class="input-field" placeholder="اسم المشترك"></div>';
+            html += '<div class="input-group"><input type="number" id="inpAmps" class="input-field" value="5" placeholder="الأمبير"></div>';
+            html += '<button class="btn-save" onclick="addNewSub()">➕ إضافة المشترك</button>';
             html += '</div>';
-
-            // القائمة
-            html += '<h3 style="margin-bottom:15px; color:#94a3b8;">القائمة (' + DB.subs.length + ')</h3>';
-            if (DB.subs.length === 0) html += '<p style="text-align:center; color:#64748b;">لا يوجد مشتركين.</p>';
 
             for (var i = 0; i < DB.subs.length; i++) {
                 var s = DB.subs[i];
                 html += '<div class="list-item">';
-                html += '<div><b>' + s.name + '</b><br><span style="color:#94a3b8; font-size:13px;">' + s.amps + ' أمبير</span></div>';
-                html += '<button class="btn-danger" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف 🗑️</button>';
+                html += '<div><b>' + s.name + '</b><br><span style="color:#94a3b8; font-size:13px;">' + s.amps + ' أمبير | ' + s.phone + '</span></div>';
+                html += '<div><button class="btn-danger" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف 🗑️</button></div>';
                 html += '</div>';
             }
             html += '</div>';
@@ -224,11 +227,10 @@
         async function addNewSub() {
             var name = document.getElementById('inpName').value;
             var amps = document.getElementById('inpAmps').value;
-            if (!name || !amps) return alert('أدخل الاسم والأمبير');
-            
-            await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '-' }]);
+            if (!name || !amps) return alert('أدخل البيانات');
+            await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '07XXXXXXXXX' }]);
             alert('✅ تم الإضافة!');
-            renderSubsScreen(); // تحديث الشاشة
+            renderSubsScreen(); 
         }
 
         async function deleteSub(id) {
@@ -237,28 +239,24 @@
             renderSubsScreen();
         }
 
-        // ب. شاشة التحصيل
-        async function renderCollectScreen() {
+        // 3. الفواتير والتحصيل
+        async function renderInvoicesScreen() {
             await loadData();
             var html = '<div class="inner-screen" style="border-top-color: #10b981;">';
-            html += '<h2 style="color: #10b981;">💵 التحصيل والمدفوعات</h2>';
+            html += '<h2 style="color: #10b981;">💵 الفواتير والتحصيل</h2>';
+            
+            if (DB.subs.length === 0) html += '<p style="text-align:center; color:#64748b;">لا يوجد مشتركين.</p>';
 
-            if (DB.subs.length === 0) html += '<p style="text-align:center; color:#64748b;">أضف مشتركين أولاً.</p>';
-
-            var price = 5000; // سعر الأمبير
             for (var i = 0; i < DB.subs.length; i++) {
                 var s = DB.subs[i];
-                var amount = s.amps * price;
-                
-                // هل دفع؟
+                var amount = s.amps * pricePerAmp;
                 var paid = false;
                 for (var j = 0; j < DB.payments.length; j++) {
                     if (DB.payments[j].sub_id === s.id && DB.payments[j].status === 'paid') { paid = true; break; }
                 }
 
                 html += '<div class="list-item" style="border-right: 4px solid ' + (paid ? '#10b981' : '#ef4444') + ';">';
-                html += '<div><b>' + s.name + '</b><br><span style="color:#94a3b8; font-size:13px;">المطلوب: ' + amount.toLocaleString() + ' د.ع</span></div>';
-                
+                html += '<div><b>' + s.name + '</b><br><span style="color:#94a3b8; font-size:13px;">' + amount.toLocaleString() + ' د.ع</span></div>';
                 if (paid) {
                     html += '<span style="color:#10b981; font-weight:bold;">✅ مسدد</span>';
                 } else {
@@ -274,48 +272,99 @@
             if (!confirm('استلام ' + amount.toLocaleString() + ' د.ع؟')) return;
             await supabase.from('payments').insert([{ sub_id: subId, amount: amount, method: 'cash', status: 'paid' }]);
             alert('✅ تم تسجيل الدفعة!');
-            renderCollectScreen();
+            renderInvoicesScreen();
         }
 
-        // ج. شاشة إدارة المولد (التحكم)
-        function renderGenControl() {
+        // 4. إدارة المولد
+        function renderGeneratorScreen() {
             var html = '<div class="inner-screen">';
             html += '<h2>⚙️ إدارة المولد</h2>';
-            html += '<div class="list-item" style="flex-direction:column; align-items:flex-start;">';
-            html += '<h4 style="margin-bottom:10px;">حالة المولد الحالية</h4>';
-            html += '<button class="btn-save" onclick="alert(\'تم إيقاف المولد\')" style="background:#ef4444;">🔴 إيقاف المولد</button>';
-            html += '<button class="btn-save" onclick="alert(\'تم تشغيل المولد\')" style="background:#10b981;">⚡ تشغيل المولد</button>';
-            html += '</div>';
-            html += '<div class="list-item" style="flex-direction:column; align-items:flex-start;">';
-            html += '<h4>مستوى الوقود</h4>';
-            html += '<p style="color:#eab308; font-size:24px; font-weight:bold; margin-top:10px;">75%</p>';
-            html += '</div>';
+            html += '<div class="stat-box"><h4>القدرة (KVA)</h4><p>500 KVA</p></div>';
+            html += '<div class="stat-box"><h4>ساعات التشغيل الكلية</h4><p>2150 ساعة</p></div>';
+            html += '<div class="stat-box"><h4>مستوى الزيت</h4><p style="color:#10b981;">ممتاز (85%)</p></div>';
+            html += '<div class="stat-box"><h4>درجة الحرارة</h4><p style="color:#f59e0b;">75 مئوية</p></div>';
             html += '</div>';
             document.getElementById('inner-view').innerHTML = html;
         }
 
-        // د. الرئيسية لصاحب المولد
-        async function renderOwnerHome() {
+        // 5. الوقود
+        async function renderFuelScreen() {
             await loadData();
-            var total = 0;
-            for(var i=0; i<DB.payments.length; i++){ total += Number(DB.payments[i].amount); }
-            
             var html = '<div class="inner-screen">';
-            html += '<h2>📊 إحصائياتك</h2>';
-            html += '<div class="list-item"><div><h4>إجمالي المحصل</h4><p style="color:#10b981; font-size:20px; font-weight:bold;">' + total.toLocaleString() + ' د.ع</p></div></div>';
-            html += '<div class="list-item"><div><h4>عدد المشتركين</h4><p style="color:#f59e0b; font-size:20px; font-weight:bold;">' + DB.subs.length + ' مشترك</p></div></div>';
+            html += '<h2>⛽ إدارة الوقود</h2>';
+            html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px;">';
+            html += '<div class="input-group"><input type="text" id="fuelCost" class="input-field" placeholder="تكلفة الوقود (د.ع)"></div>';
+            html += '<button class="btn-save" style="background:#eab308;" onclick="addFuel()">➕ إضافة تعبئة وقود</button>';
+            html += '</div>';
+
+            html += '<h3 style="color:#94a3b8; margin-bottom:10px;">سجل التعبئة</h3>';
+            for(var i=0; i<DB.expenses.length; i++) {
+                if(DB.expenses[i].type === 'وقود') {
+                    html += '<div class="list-item"><div><b>تعبئة وقود</b></div><div style="color:#ef4444;">' + Number(DB.expenses[i].amount).toLocaleString() + ' د.ع</div></div>';
+                }
+            }
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function addFuel() {
+            var cost = document.getElementById('fuelCost').value;
+            if(!cost) return alert('أدخل التكلفة');
+            await supabase.from('expenses').insert([{ type: 'وقود', amount: cost, note: 'تعبئة' }]);
+            alert('✅ تم تسجيل التعبئة');
+            renderFuelScreen();
+        }
+
+        // 6. التقارير
+        async function renderReportsScreen() {
+            await loadData();
+            var totalIncome = 0;
+            var totalExpense = 0;
+            for(var i=0; i<DB.payments.length; i++) totalIncome += Number(DB.payments[i].amount);
+            for(var j=0; j<DB.expenses.length; j++) totalExpense += Number(DB.expenses[j].amount);
+            var profit = totalIncome - totalExpense;
+
+            var html = '<div class="inner-screen">';
+            html += '<h2>📈 التقارير والأرباح</h2>';
+            html += '<div class="stat-box"><h4>إجمالي الإيرادات</h4><p style="color:#10b981;">' + totalIncome.toLocaleString() + ' د.ع</p></div>';
+            html += '<div class="stat-box"><h4>إجمالي المصروفات</h4><p style="color:#ef4444;">' + totalExpense.toLocaleString() + ' د.ع</p></div>';
+            html += '<div class="stat-box" style="border:1px solid #f59e0b;"><h4>صافي الربح</h4><p style="color:#f59e0b;">' + profit.toLocaleString() + ' د.ع</p></div>';
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        // 7. الرسائل
+        function renderMessagesScreen() {
+            var html = '<div class="inner-screen" style="border-top-color:#3b82f6;">';
+            html += '<h2 style="color:#3b82f6;">💬 إرسال رسالة</h2>';
+            html += '<div class="input-group"><select class="input-field" style="color:white;"><option>لجميع المشتركين</option><option>لمشترك معين</option></select></div>';
+            html += '<div class="input-group"><textarea class="input-field" rows="4" placeholder="اكتب نص الإشعار أو رسالة الصيانة..."></textarea></div>';
+            html += '<button class="btn-save" onclick="alert(\'تم إرسال الإشعار بنجاح (محاكاة)\')">📤 إرسال</button>';
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        // 8. الإعدادات
+        function renderSettingsScreen() {
+            var html = '<div class="inner-screen">';
+            html += '<h2>⚙️ الإعدادات</h2>';
+            html += '<div class="input-group"><label>اسم صاحب المولد:</label><input type="text" class="input-field" value="أحمد"></div>';
+            html += '<div class="input-group"><label>اسم المولد:</label><input type="text" class="input-field" value="مولد النور"></div>';
+            html += '<div class="input-group"><label>تسعيرة الأمبير:</label><input type="number" class="input-field" value="5000"></div>';
+            html += '<div class="input-group"><label>أوقات التشغيل:</label><input type="text" class="input-field" value="6 صباحاً - 12 منتصف الليل"></div>';
+            html += '<button class="btn-save" onclick="alert(\'تم الحفظ (محاكاة)\')">حفظ الإعدادات</button>';
             html += '</div>';
             document.getElementById('inner-view').innerHTML = html;
         }
 
         // ==========================================
-        // 5. شاشات مالك المنصة والمواطن (مبسطة للديمو)
+        // 5. شاشات الأعمدة الأخرى
         // ==========================================
         async function renderAdminHome() {
             await loadData();
             var html = '<div class="inner-screen" style="border-top-color:#eab308;">';
-            html += '<h2 style="color:#eab308;">👑 لوحة المنصة</h2>';
-            html += '<div class="list-item"><div><h4>إجمالي المشتركين</h4><p style="font-size:20px; font-weight:bold;">' + DB.subs.length + '</p></div></div>';
+            html += '<h2 style="color:#eab308;">👑 إحصائيات المنصة</h2>';
+            html += '<div class="stat-box"><h4>إجمالي المشتركين (كل المولدات)</h4><p>' + DB.subs.length + '</p></div>';
             html += '</div>';
             document.getElementById('inner-view').innerHTML = html;
         }
@@ -323,16 +372,13 @@
         function renderCitizenInvoice() {
             var html = '<div class="inner-screen" style="border-top-color:#3b82f6;">';
             html += '<h2 style="color:#3b82f6;">🧾 فاتورتي</h2>';
-            html += '<div class="list-item" style="flex-direction:column; align-items:flex-start;">';
-            html += '<h4>المبلغ المطلوب</h4>';
-            html += '<p style="color:#f59e0b; font-size:24px; font-weight:bold; margin-top:10px;">25,000 د.ع</p>';
-            html += '<button class="btn-save" style="margin-top:15px;">ادفع عبر سوبر كيو</button>';
-            html += '</div>';
+            html += '<div class="stat-box"><h4>المبلغ المطلوب</h4><p style="color:#f59e0b;">25,000 د.ع</p></div>';
+            html += '<button class="btn-save" style="background:#3b82f6;">ادفع الآن (سوبر كيو)</button>';
             html += '</div>';
             document.getElementById('inner-view').innerHTML = html;
         }
 
-        // تشغيل جلب البيانات عند البداية
+        // التشغيل الأولي
         document.addEventListener('DOMContentLoaded', loadData);
     </script>
 </body>

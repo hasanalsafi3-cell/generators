@@ -416,4 +416,89 @@
         document.addEventListener('DOMContentLoaded', loadData);
     </script>
 </body>
+</html><!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار قاعدة البيانات</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; background: #0b1120; color: white; text-align: center; padding: 30px; }
+        .box { background: #1e293b; padding: 20px; border-radius: 15px; margin-bottom: 20px; border-top: 4px solid #f59e0b; }
+        .box.citizen { border-top: 4px solid #3b82f6; }
+        button { padding: 15px 30px; font-size: 18px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; color: white; margin-top: 15px; }
+        .btn-on { background: #10b981; }
+        .btn-off { background: #ef4444; }
+        h2 { margin-bottom: 15px; }
+        .status-text { font-size: 22px; font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h2>⚡ لوحة صاحب المولد (للاختبار)</h2>
+        <p>اضغط الزر لتغيير حالة المولد في السحابة</p>
+        <button id="toggleBtn" onclick="toggleGen()">جاري التحميل...</button>
+    </div>
+
+    <div class="box citizen">
+        <h2>👤 واجهة المواطن (تتحدث تلقائياً)</h2>
+        <p>هذا ما يراه المواطن عندما يفتح التطبيق:</p>
+        <div class="status-text" id="citizenView">جاري التحميل...</div>
+    </div>
+
+    <script>
+        // ربط السحابة
+        var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+        var currentStatus = false;
+
+        // 1. دالة جلب الحالة من السحابة
+        async function loadStatus() {
+            var res = await supabase.from('settings').select('status').eq('id', 1).single();
+            if (res.data) {
+                currentStatus = res.data.status;
+                updateUI();
+            } else {
+                alert('لم يتم العثور على بيانات في جدول settings. تأكد من الـ SQL.');
+            }
+        }
+
+        // 2. تحديث الشاشة بناءً على الحالة
+        function updateUI() {
+            var btn = document.getElementById('toggleBtn');
+            var citizen = document.getElementById('citizenView');
+
+            if (currentStatus === true) {
+                btn.innerText = '🔴 إيقاف المولد';
+                btn.className = 'btn-off';
+                citizen.innerText = '⚡ المولدة شغالة الآن';
+                citizen.style.color = '#10b981';
+            } else {
+                btn.innerText = '⚡ تشغيل المولد';
+                btn.className = 'btn-on';
+                citizen.innerText = '🔴 المولدة مطفية حالياً';
+                citizen.style.color = '#ef4444';
+            }
+        }
+
+        // 3. دالة تغيير الحالة (من صاحب المولد)
+        async function toggleGen() {
+            var newStatus = !currentStatus;
+            
+            // تحديث السحابة
+            var res = await supabase.from('settings').update({ status: newStatus }).eq('id', 1);
+            
+            if (res.error) {
+                alert('خطأ في التحديث: ' + res.error.message);
+            } else {
+                currentStatus = newStatus;
+                updateUI();
+            }
+        }
+
+        // تشغيل الجلب عند فتح الصفحة
+        loadStatus();
+    </script>
+</body>
 </html>

@@ -362,7 +362,7 @@
             var name = document.getElementById('inpName').value;
             var amps = document.getElementById('inpAmps').value;
             if (!name || !amps) return alert('أدخل البيانات كاملة');
-            var res = await supabase.from('subscribers').insert([{ name: name, amps: parseInt(amps), phone: '-', user_id: currentUser.id }]);
+            var res = await supabase.from('subscribers').insert([{ name: name, amps: parseInt(amps), phone: '-', user_id: currentUser.id, prev_debt: 0 }]);
             if (res.error) alert('فشل الحفظ: ' + res.error.message);
             else { alert('✅ تم الإضافة بنجاح!'); renderSubsScreen(); }
         }
@@ -406,22 +406,13 @@
             document.getElementById('qrModal').classList.remove('hidden');
         }
 
-        // دالة حساب الفواتير والمتأخرات (تم تعديلها)
+        // حساب الديون المعتمد على قاعدة البيانات
         function calculateSubDebts(s, price, currentMonth) {
-            var subDate = s.created_at ? new Date(s.created_at) : new Date();
-            var now = new Date();
-            
-            // حساب عدد الأشهر منذ إضافة المشترك
-            var monthsActive = (now.getFullYear() - subDate.getFullYear()) * 12 + (now.getMonth() - subDate.getMonth()) + 1;
-            if (monthsActive < 1) monthsActive = 1;
-
-            var totalExpected = monthsActive * s.amps * price;
-            var totalPaidAll = 0;
+            var currentMonthDue = s.amps * price;
             var currentMonthPaid = 0;
 
             for (var j = 0; j < DB.payments.length; j++) {
                 if (DB.payments[j].sub_id === s.id) {
-                    totalPaidAll += Number(DB.payments[j].amount);
                     var pMonth = DB.payments[j].billing_month || 'الشهر الحالي';
                     if (pMonth === currentMonth) {
                         currentMonthPaid += Number(DB.payments[j].amount);
@@ -429,14 +420,11 @@
                 }
             }
 
-            var currentMonthDue = s.amps * price;
             var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
-            var totalRemaining = Math.max(0, totalExpected - totalPaidAll);
-            var prevDebt = Math.max(0, totalRemaining - currentMonthRemaining);
+            var prevDebt = Number(s.prev_debt || 0);
             var finalDue = currentMonthRemaining + prevDebt;
 
             return {
-                totalPaid: totalPaidAll,
                 currentMonthDue: currentMonthDue,
                 currentMonthRemaining: currentMonthRemaining,
                 prevDebt: prevDebt,
@@ -466,7 +454,7 @@
                     html += '<div style="color:#ef4444; font-size:13px; font-weight:bold; margin-bottom:5px;">⚠️ متأخرات سابقة: ' + debts.prevDebt.toLocaleString() + ' د.ع</div>';
                 }
 
-                html += '<div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;"><span style="color:#10b981;">المسدد: ' + debts.totalPaid.toLocaleString() + '</span> <span style="color:#ef4444;">الإجمالي المطلوب: ' + debts.finalDue.toLocaleString() + '</span></div>';
+                html += '<div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;"><span style="color:#10b981;">مسدد هذا الشهر: ' + debts.currentMonthRemaining === 0 ? 'مكتمل' : (debts.currentMonthDue - debts.currentMonthRemaining).toLocaleString() + '</span> <span style="color:#ef4444;">الإجمالي المطلوب: ' + debts.finalDue.toLocaleString() + '</span></div>';
                 
                 html += '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
                 if (debts.finalDue > 0) {
@@ -477,7 +465,7 @@
                 
                 if(!isCollector) {
                     html += '<button class="btn-blue" style="font-size:14px;" onclick="showPaymentHistory(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">📜 السجل</button>';
-                    if (debts.totalPaid > 0) {
+                    if (debts.finalDue > 0) {
                         html += '<button class="btn-warning" style="flex:1; font-size:14px;" onclick="cancelLastPayment(&quot;' + s.id + '&quot;)">إلغاء آخر دفعة</button>';
                     }
                 }
@@ -504,6 +492,7 @@
             document.getElementById('historyModal').classList.remove('hidden');
         }
 
+        // دالة الدفع المعدلة لخصم الديون السابقة
         async function payInstallment(subId, finalDue) {
             var amountStr = prompt("الإجمالي المطلوب (شامل المتأخرات): " + finalDue.toLocaleString() + "\nأدخل المبلغ المستلم:", finalDue);
             if (amountStr === null) return;
@@ -511,6 +500,24 @@
             if (isNaN(amount) || amount <= 0 || amount > finalDue) return alert('مبلغ غير صحيح');
             
             var currentMonth = DB.settings.current_month || 'الشهر الحالي';
+            var s = DB.subs.find(x => x.id === subId);
+            var price = DB.settings.price_per_amp;
+            
+            var currentMonthDue = s.amps * price;
+            var currentMonthPaid = 0;
+            for (var j = 0; j < DB.payments.length; j++) {
+                var pMonth = DB.payments[j].billing_month || 'الشهر الحالي';
+                if (DB.payments[j].sub_id === subId && pMonth === currentMonth) currentMonthPaid += Number(DB.payments[j].amount);
+            }
+            var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
+
+            // كم مبلغ يذهب لسداد الديون القديمة؟
+            var amountForDebt = Math.max(0, amount - currentMonthRemaining);
+            var newPrevDebt = Math.max(0, Number(s.prev_debt || 0) - amountForDebt);
+
+            if (amountForDebt > 0) {
+                await supabase.from('subscribers').update({ prev_debt: newPrevDebt }).eq('id', subId);
+            }
             
             await supabase.from('payments').insert([{ 
                 sub_id: subId, 
@@ -678,13 +685,39 @@
             alert('تم حفظ الإعدادات بنجاح');
         }
 
+        // دالة ترحيل الديون (تم تعديلها لحفظ الديون في قاعدة البيانات)
         async function startNewMonth() {
-            var newMonth = prompt("أدخل اسم الشهر الجديد (مثال: يونيو 2024):\nملاحظة: الديون السابقة راح تنتقل تلقائياً للشهر الجديد.", "الشهر الجديد");
+            var newMonth = prompt("أدخل اسم الشهر الجديد (مثال: يونيو 2024):\nملاحظة: سيتم ترحيل ديون الشهر الحالي إلى الشهر الجديد.", "الشهر الجديد");
             if (!newMonth) return;
             
+            var price = DB.settings.price_per_amp;
+            var oldMonth = DB.settings.current_month || 'الشهر الحالي';
+            
+            for (var i = 0; i < DB.subs.length; i++) {
+                var s = DB.subs[i];
+                var currentMonthDue = s.amps * price;
+                var currentMonthPaid = 0;
+                
+                for (var j = 0; j < DB.payments.length; j++) {
+                    var pMonth = DB.payments[j].billing_month || 'الشهر الحالي';
+                    if (DB.payments[j].sub_id === s.id && pMonth === oldMonth) {
+                        currentMonthPaid += Number(DB.payments[j].amount);
+                    }
+                }
+                
+                var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
+                var newPrevDebt = Number(s.prev_debt || 0) + currentMonthRemaining;
+
+                // تحديث ديون المشترك في السحابة
+                await supabase.from('subscribers').update({ prev_debt: newPrevDebt }).eq('id', s.id);
+            }
+            
+            // تحديث اسم الشهر
             await supabase.from('settings').update({ current_month: newMonth }).eq('id', DB.settings.id);
             DB.settings.current_month = newMonth;
-            alert('✅ تم بدء شهر جديد: ' + newMonth + '\nالفواتير صفرت، والمتأخرات محفوظة.');
+            
+            alert('✅ تم بدء شهر جديد: ' + newMonth + '\nتم ترحيل الديون غير المسددة بنجاح.');
+            await loadData();
             renderSettingsScreen();
         }
 
@@ -786,7 +819,6 @@
             innerView.innerHTML = html;
         }
 
-        // تحديث واجهة المواطن لتشمل المتأخرات
         async function renderCitizenInvoice() {
             var urlParams = new URLSearchParams(window.location.search);
             var citizenId = urlParams.get('citizen');
@@ -809,28 +841,16 @@
             var settings = resSet.data || { status: true, price_per_amp: 5000, owner_phone: '', work_hours: '', current_month: 'الشهر الحالي' };
             var currentMonth = settings.current_month || 'الشهر الحالي';
             
-            // حساب الديون للمواطن
-            var subDate = citizen.created_at ? new Date(citizen.created_at) : new Date();
-            var now = new Date();
-            var monthsActive = (now.getFullYear() - subDate.getFullYear()) * 12 + (now.getMonth() - subDate.getMonth()) + 1;
-            if (monthsActive < 1) monthsActive = 1;
-
-            var totalExpected = monthsActive * citizen.amps * settings.price_per_amp;
-            var totalPaidAll = 0;
+            var currentMonthDue = citizen.amps * settings.price_per_amp;
             var currentMonthPaid = 0;
-
             if(resPays.data) { 
                 for(var j=0; j<resPays.data.length; j++) {
-                    totalPaidAll += Number(resPays.data[j].amount);
                     var pMonth = resPays.data[j].billing_month || 'الشهر الحالي';
                     if(pMonth === currentMonth) currentMonthPaid += Number(resPays.data[j].amount);
                 }
             }
-
-            var currentMonthDue = citizen.amps * settings.price_per_amp;
             var currentMonthRemaining = Math.max(0, currentMonthDue - currentMonthPaid);
-            var totalRemaining = Math.max(0, totalExpected - totalPaidAll);
-            var prevDebt = Math.max(0, totalRemaining - currentMonthRemaining);
+            var prevDebt = Number(citizen.prev_debt || 0);
             var finalDue = currentMonthRemaining + prevDebt;
 
             var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">🧾 أهلاً، ' + citizen.name + '</h2>';

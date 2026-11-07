@@ -58,7 +58,6 @@
         .stat-box p { color:#f8fafc; font-size:24px; font-weight:bold;}
         .stat-box .status-btn { width: 100%; margin-top: 10px; padding: 15px; border-radius: 10px; border: none; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
 
-        /* نافذة منبثقة */
         .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px;}
         .modal-box { background: #1e293b; padding: 20px; border-radius: 15px; width: 100%; max-width: 350px; text-align: center; border-top: 4px solid #3b82f6;}
 
@@ -128,17 +127,24 @@
     </div>
 
     <script>
+        // إعداد الاتصال بقاعدة البيانات
         var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-        var DB = { subs: [], payments: [], expenses: [], settings: { price_per_amp: 5000, status: true } };
+        var DB = { subs: [], payments: [], expenses: [], settings: { price_per_amp: 5000, status: true, is_active: true } };
         var currentUser = null;
         var isLoginMode = true;
 
+        // 1. التحقق من الدخول
         async function checkAuth() {
             var { data: { session } } = await supabase.auth.getSession();
-            if (session) { currentUser = session.user; showApp(); } 
-            else { document.getElementById('authScreen').classList.remove('hidden'); }
+            if (session) {
+                currentUser = session.user;
+                await showApp();
+            } else {
+                document.getElementById('authScreen').classList.remove('hidden');
+            }
         }
 
+        // 2. تسجيل الدخول
         function toggleAuthMode() {
             isLoginMode = !isLoginMode;
             document.getElementById('authTitle').innerText = isLoginMode ? 'تسجيل الدخول' : 'إنشاء حساب جديد';
@@ -154,7 +160,7 @@
             if (isLoginMode) {
                 var { data, error } = await supabase.auth.signInWithPassword({ email: email, password: password });
                 if (error) alert('خطأ: ' + error.message);
-                else { currentUser = data.user; showApp(); }
+                else { currentUser = data.user; await showApp(); }
             } else {
                 var { data, error } = await supabase.auth.signUp({ email: email, password: password });
                 if (error) alert('خطأ: ' + error.message);
@@ -167,35 +173,59 @@
             window.location.reload();
         }
 
+        // 3. إظهار التطبيق
         async function showApp() {
             document.getElementById('authScreen').classList.add('hidden');
             document.getElementById('appScreen').classList.remove('hidden');
             await loadData();
         }
 
+        // 4. جلب البيانات (مع فحص حالة الحساب)
         async function loadData() {
             if(!currentUser) return;
+            
+            // جلب إعدادات الحساب
+            var resSet = await supabase.from('settings').select('*').eq('user_id', currentUser.id).maybeSingle();
+            
+            if (resSet.data) {
+                DB.settings = resSet.data;
+                // فحص إذا الحساب موقوف
+                if (DB.settings.is_active === false) {
+                    alert('⛔ عذراً، حسابك موقوف من قبل إدارة المنصة. يرجى التواصل مع الدعم.');
+                    await logout();
+                    return;
+                }
+            } else {
+                // إنشاء إعدادات لأول مرة
+                var newSettings = { 
+                    id: Math.floor(Math.random() * 100000), 
+                    price_per_amp: 5000, 
+                    status: true, 
+                    is_active: true,
+                    email: currentUser.email,
+                    generator_name: 'مولد النور', 
+                    user_id: currentUser.id 
+                };
+                await supabase.from('settings').insert([newSettings]);
+                DB.settings = newSettings;
+            }
+
+            // جلب باقي البيانات
             var resSubs = await supabase.from('subscribers').select('*').eq('user_id', currentUser.id);
             var resPays = await supabase.from('payments').select('*').eq('user_id', currentUser.id);
             var resExp = await supabase.from('expenses').select('*').eq('user_id', currentUser.id);
-            var resSet = await supabase.from('settings').select('*').eq('user_id', currentUser.id).maybeSingle();
             
             if (resSubs.data) DB.subs = resSubs.data;
             if (resPays.data) DB.payments = resPays.data;
             if (resExp.data) DB.expenses = resExp.data;
-            
-            if (resSet.data) { DB.settings = resSet.data; } 
-            else {
-                var newSettings = { id: Math.floor(Math.random() * 100000), price_per_amp: 5000, status: true, generator_name: 'مولد النور', user_id: currentUser.id };
-                await supabase.from('settings').insert([newSettings]);
-                DB.settings = newSettings;
-            }
         }
 
+        // 5. التنقل بين الشاشات
         function openScreen(screenName) {
             document.getElementById('dashboard-view').classList.add('hidden');
             document.getElementById('backBtn').classList.remove('hidden');
             document.getElementById('mainTitle').innerText = 'العودة للرئيسية';
+            
             var innerView = document.getElementById('inner-view');
             innerView.classList.remove('hidden');
             innerView.innerHTML = '<div class="inner-screen"><p style="text-align:center;">جاري التحميل...</p></div>';
@@ -219,7 +249,7 @@
             document.getElementById('mainTitle').innerText = '🔌 منصة إدارة المولدات';
         }
 
-        // --- الشاشات ---
+        // 6. شاشات صاحب المولد
         async function renderOwnerHome() {
             await loadData();
             var total = 0;
@@ -410,11 +440,71 @@
             alert('تم الحفظ');
         }
 
+        // ==========================================
+        // 7. لوحة مالك المنصة (الجديدة)
+        // ==========================================
         async function renderAdminHome() {
-            var html = '<div class="inner-screen"><h2>👑 المنصة</h2><p style="text-align:center;">هذه اللوحة لك أنت فقط.</p></div>';
-            document.getElementById('inner-view').innerHTML = html;
+            var innerView = document.getElementById('inner-view');
+            innerView.innerHTML = '<div class="inner-screen" style="border-top-color:#eab308;"><h2 style="color:#eab308;">👑 إدارة المنصة</h2><p style="text-align:center;">جاري جلب المولدات...</p></div>';
+
+            // جلب كل المولدات المسجلة في المنصة
+            var resSettings = await supabase.from('settings').select('*');
+            // جلب كل المشتركين لحساب العدد
+            var resSubs = await supabase.from('subscribers').select('user_id');
+            
+            if (resSettings.error) {
+                innerView.innerHTML = '<div class="inner-screen" style="border-top-color:#eab308;"><h2 style="color:#eab308;">خطأ</h2><p>' + resSettings.error.message + '</p></div>';
+                return;
+            }
+
+            var allSettings = resSettings.data || [];
+            var allSubs = resSubs.data || [];
+
+            var html = '<div class="inner-screen" style="border-top-color:#eab308;"><h2 style="color:#eab308;">👑 إدارة المنصة</h2>';
+            html += '<div class="stat-box"><h4>إجمالي المولدات المسجلة</h4><p>' + allSettings.length + '</p></div>';
+
+            if (allSettings.length === 0) {
+                html += '<p style="text-align:center;">لا يوجد مولدات مسجلة بعد.</p>';
+            }
+
+            for (var i = 0; i < allSettings.length; i++) {
+                var s = allSettings[i];
+                var subCount = 0;
+                for(var j=0; j<allSubs.length; j++) {
+                    if(allSubs[j].user_id === s.user_id) subCount++;
+                }
+
+                var statusColor = s.is_active !== false ? '#10b981' : '#ef4444';
+                var statusText = s.is_active !== false ? 'نشط' : 'موقوف';
+                var btnText = s.is_active !== false ? 'إيقاف الحساب' : 'تفعيل الحساب';
+                var btnClass = s.is_active !== false ? 'btn-danger' : 'btn-save';
+
+                html += '<div class="list-item" style="flex-direction:column; align-items:stretch; border-right: 4px solid ' + statusColor + ';">';
+                html += '<div style="display:flex; justify-content:space-between; margin-bottom:10px;">';
+                html += '<div><b>' + (s.generator_name || 'مولد بدون اسم') + '</b><br><span style="color:#94a3b8; font-size:12px;">' + (s.email || 'لا يوجد إيميل') + '</span></div>';
+                html += '<div style="text-align:left;"><span style="color:' + statusColor + '; font-weight:bold;">' + statusText + '</span><br><span style="color:#94a3b8; font-size:12px;">' + subCount + ' مشترك</span></div>';
+                html += '</div>';
+                html += '<button class="' + btnClass + '" style="margin:0; font-size:14px; padding:8px;" onclick="toggleAccountStatus(&quot;' + s.user_id + '&quot;, ' + (s.is_active !== false) + ')">' + btnText + '</button>';
+                html += '</div>';
+            }
+
+            html += '</div>';
+            innerView.innerHTML = html;
         }
 
+        async function toggleAccountStatus(userId, currentStatus) {
+            var newStatus = !currentStatus;
+            var confirmMsg = newStatus ? 'هل أنت متأكد من تفعيل حساب هذا العميل؟' : 'هل أنت متأكد من إيقاف حساب هذا العميل؟ (لن يتمكن من الدخول)';
+            if (!confirm(confirmMsg)) return;
+
+            await supabase.from('settings').update({ is_active: newStatus }).eq('user_id', userId);
+            alert('✅ تم تغيير حالة الحساب بنجاح!');
+            renderAdminHome(); // تحديث الشاشة
+        }
+
+        // ==========================================
+        // 8. واجهة المواطن
+        // ==========================================
         async function renderCitizenInvoice() {
             var urlParams = new URLSearchParams(window.location.search);
             var citizenId = urlParams.get('citizen');
@@ -425,15 +515,15 @@
             }
 
             var resSub = await supabase.from('subscribers').select('*').eq('id', citizenId).single();
-            var resSet = await supabase.from('settings').select('*').eq('user_id', resSub.data.user_id).single(); 
-            var resPays = await supabase.from('payments').select('*').eq('sub_id', citizenId);
-
             if (resSub.error || !resSub.data) {
                 document.getElementById('inner-view').innerHTML = '<div class="inner-screen"><h2>خطأ</h2><p style="text-align:center;">لم يتم العثور على حسابك.</p></div>';
                 return;
             }
 
             var citizen = resSub.data;
+            var resSet = await supabase.from('settings').select('*').eq('user_id', citizen.user_id).single(); 
+            var resPays = await supabase.from('payments').select('*').eq('sub_id', citizenId);
+
             var settings = resSet.data || { status: true, price_per_amp: 5000 };
             var totalDue = citizen.amps * settings.price_per_amp;
             var totalPaid = 0;
@@ -444,8 +534,11 @@
             html += '<div class="stat-box"><h4>حالة المولدة</h4><p style="color:' + (settings.status ? '#10b981' : '#ef4444') + ';">' + (settings.status ? 'شغالة الآن ⚡' : 'مطفية حالياً 🔴') + '</p></div>';
             html += '<div class="stat-box"><h4>فاتورتك الحالية</h4><p style="font-size:14px; color:#94a3b8; margin-bottom:5px;">اشتراكك: ' + citizen.amps + ' أمبير</p>';
             html += '<p style="color:#f59e0b; font-size:28px; font-weight:bold;">' + remaining.toLocaleString() + ' د.ع</p>';
-            if(remaining > 0) { html += '<button class="btn-save" style="background:#3b82f6; margin-top:15px; font-size:18px;">💳 ادفع عبر سوبر كيو</button>'; } 
-            else { html += '<p style="color:#10b981; font-weight:bold; font-size:20px; margin-top:15px;">✅ مسدد بالكامل</p>'; }
+            if(remaining > 0) { 
+                html += '<button class="btn-save" style="background:#3b82f6; margin-top:15px; font-size:18px;">💳 ادفع عبر سوبر كيو</button>'; 
+            } else { 
+                html += '<p style="color:#10b981; font-weight:bold; font-size:20px; margin-top:15px;">✅ مسدد بالكامل</p>'; 
+            }
             html += '</div></div>';
             document.getElementById('inner-view').innerHTML = html;
         }
@@ -453,4 +546,4 @@
         document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
-</html> 
+</html>

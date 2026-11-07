@@ -6,145 +6,68 @@
     <title>أبو المولد</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f4f7fb; padding-bottom: 90px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background: #f4f7fb; }
         .hidden { display: none !important; }
-        
-        /* الشريط العلوي */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
-        .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: #ccc; border: 2px solid #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .app-title { text-align: center; }
-        .app-title h1 { font-size: 22px; color: #0f172a; display: flex; align-items: center; gap: 5px; }
-        .app-title p { font-size: 12px; color: #64748b; margin-top: 2px; }
-        .notif-btn { background: #e0e7ff; border: none; padding: 10px; border-radius: 12px; position: relative; font-size: 20px; }
-        .notif-badge { position: absolute; top: -5px; left: -5px; background: #ef4444; color: white; font-size: 10px; border-radius: 50%; padding: 2px 6px; }
 
-        /* الكارت الرئيسي */
-        .main-card { background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 24px; margin: 0 20px; padding: 20px; color: white; position: relative; overflow: hidden; box-shadow: 0 10px 20px rgba(15, 23, 42, 0.2); }
-        .status-pill { display: inline-flex; align-items: center; gap: 5px; background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 5px 12px; border-radius: 20px; font-size: 12px; margin-bottom: 15px; }
-        .status-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
-        .main-card h2 { font-size: 28px; margin-bottom: 5px; }
-        .main-card .capacity { font-size: 14px; color: #94a3b8; margin-bottom: 20px; }
-        .main-card-stats { display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
-        .stat-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-        .stat-item b { display: block; font-size: 16px; }
-        .gen-img { position: absolute; left: -20px; bottom: 10px; width: 160px; opacity: 0.9; }
+        /* شاشة البداية */
+        .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; padding: 20px; }
+        .login-screen h1 { color: #0f172a; margin-bottom: 40px; font-size: 32px; }
+        .role-btn { width: 100%; max-width: 300px; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; cursor: pointer; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .role-btn.citizen { background: #3b82f6; }
+        .role-btn.owner { background: #f59e0b; }
+        .role-btn.admin { background: #1e293b; }
 
-        /* أزرار الإجراءات */
-        .actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px; }
-        .action-btn { background: white; border: none; border-radius: 16px; padding: 15px 5px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; color: #1e293b; font-weight: bold; font-size: 12px; }
-        .action-icon { font-size: 24px; background: #e0e7ff; padding: 8px; border-radius: 50%; }
-        .action-btn.power { background: #1e293b; color: white; }
-        .action-btn.power .action-icon { background: rgba(255,255,255,0.1); }
-
-        /* قائمة المولدات */
-        .section-header { display: flex; justify-content: space-between; align-items: center; margin: 20px; }
-        .section-header h3 { font-size: 18px; color: #0f172a; }
-        .view-all { color: #64748b; font-size: 14px; text-decoration: none; background: #e2e8f0; padding: 5px 10px; border-radius: 10px; }
-        
-        .gen-list-item { background: white; border-radius: 20px; margin: 0 20px 15px 20px; padding: 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .gen-info { flex: 1; }
-        .gen-info h4 { font-size: 16px; color: #0f172a; margin-bottom: 5px; }
-        .gen-info p { font-size: 12px; color: #64748b; margin-bottom: 5px; }
-        .gen-info .sub-stats { display: flex; gap: 15px; font-size: 12px; color: #475569; margin-top: 8px; }
-        
-        .gen-list-img { width: 80px; height: 60px; object-fit: cover; border-radius: 10px; }
-
-        /* الشريط السفلي */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; align-items: center; padding: 10px 0; border-top-left-radius: 20px; border-top-right-radius: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.05); }
-        .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #94a3b8; font-size: 11px; font-weight: bold; }
+        /* لوحة صاحب المولد (اللي سويناها) */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #fff; }
+        .main-card { background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 24px; margin: 20px; padding: 20px; color: white; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top-left-radius: 20px; border-top-right-radius: 20px; }
+        .nav-btn { background: none; border: none; font-size: 12px; font-weight: bold; color: #94a3b8; cursor: pointer; }
         .nav-btn.active { color: #3b82f6; }
-        .nav-icon { font-size: 20px; }
-        .fab { background: #1e293b; color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 28px; margin-top: -30px; box-shadow: 0 4px 10px rgba(30, 41, 59, 0.4); border: 4px solid white; }
     </style>
 </head>
 <body>
-    <!-- الشريط العلوي -->
-    <div class="top-bar">
-        <img src="https://i.pravatar.cc/100?img=11" class="user-avatar" alt="User">
-        <div class="app-title">
-            <h1>أبو المولد ⚡</h1>
-            <p>إدارة المولدات الذكية</p>
-        </div>
-        <button class="notif-btn">🔔<span class="notif-badge">3</span></button>
+    <!-- شاشة البداية (تختار منها منو أنت) -->
+    <div id="loginScreen" class="login-screen">
+        <h1>مرحباً بك 👋</h1>
+        <button class="role-btn owner" onclick="enterApp('owner')">⚡ صاحب المولد</button>
+        <button class="role-btn citizen" onclick="enterApp('citizen')">👤 المواطن</button>
+        <button class="role-btn admin" onclick="enterApp('admin')">👑 مدير المنصة</button>
     </div>
 
-    <!-- الكارت الرئيسي -->
-    <div class="main-card">
-        <div class="status-pill"><span class="status-dot"></span> المولد يعمل بشكل طبيعي</div>
-        <h2>مولد رقم #1</h2>
-        <div class="capacity">قدرة المولد: 500 KVA ⚡</div>
-        <div class="main-card-stats">
-            <div class="stat-item">⏱️ <div><span>وقت التشغيل</span><b>12h 35m</b></div></div>
-            <div class="stat-item">⛽ <div><span>مستوى الوقود</span><b>75%</b></div></div>
-        </div>
-        <!-- صورة المولد -->
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Diesel_generator.jpg/640px-Diesel_generator.jpg" class="gen-img" alt="Generator">
-    </div>
-
-    <!-- أزرار الإجراءات -->
-    <div class="actions-grid">
-        <button class="action-btn"><span class="action-icon">⚙️</span>الإعدادات</button>
-        <button class="action-btn"><span class="action-icon">📊</span>التقارير</button>
-        <button class="action-btn"><span class="action-icon">📅</span>الجدولة</button>
-        <button class="action-btn power" onclick="togglePower()"><span class="action-icon">⏻</span>تشغيل / إيقاف</button>
-    </div>
-
-    <!-- قائمة المولدات -->
-    <div class="section-header">
-        <a href="#" class="view-all">عرض الكل <span>‹</span></a>
-        <h3>قائمة المولدات</h3>
-    </div>
-
-    <div class="gen-list-item">
-        <div class="gen-info">
-            <h4>مولد رقم #1</h4>
-            <p>500 KVA</p>
-            <span style="color:#10b981; font-size:12px;">● يعمل</span>
-            <div class="sub-stats">
-                <span>⏱️ 12h 35m</span>
-                <span>⛽ 75%</span>
+    <!-- شاشة التطبيق (تفتح لما تختار) -->
+    <div id="appScreen" class="hidden" style="padding-bottom: 80px;">
+        
+        <!-- لوحة صاحب المولد -->
+        <div id="ownerDashboard">
+            <div class="top-bar">
+                <h2 style="color: #0f172a;">أبو المولد ⚡</h2>
+                <button onclick="logout()" style="border:none; background:#ef4444; color:white; padding:8px; border-radius:8px;">خروج</button>
+            </div>
+            <div class="main-card">
+                <h2>مولد رقم #1</h2>
+                <p style="margin-top: 10px; color: #94a3b8;">قدرة المولد: 500 KVA</p>
+            </div>
+            <div style="padding: 20px; text-align: center; color: #64748b;">
+                <h3>أهلاً بك يا صاحب المولد</h3>
+                <p>هنا تقدر تدير مشتركينك وتحصلك.</p>
             </div>
         </div>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Diesel_generator.jpg/640px-Diesel_generator.jpg" class="gen-list-img" alt="Gen 1">
-        <span style="color:#94a3b8; font-size:20px; margin-right:10px;">›</span>
-    </div>
 
-    <div class="gen-list-item">
-        <div class="gen-info">
-            <h4>مولد رقم #2</h4>
-            <p>750 KVA</p>
-            <span style="color:#ef4444; font-size:12px;">● متوقف</span>
-            <div class="sub-stats">
-                <span>⏱️ 2h 10m</span>
-                <span>⛽ 30%</span>
-            </div>
+        <!-- لوحة المواطن (فاضية حالياً راح نعمرها بعدين) -->
+        <div id="citizenDashboard" class="hidden" style="padding: 20px; text-align: center;">
+            <h2 style="color: #3b82f6;">لوحة المواطن 👤</h2>
+            <p style="margin-top: 20px;">هنا راح تشوف فاتورتك وحالة المولدة.</p>
+            <button onclick="logout()" style="margin-top: 30px; padding: 10px 20px; border: none; background: #ef4444; color: white; border-radius: 8px;">خروج</button>
         </div>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Diesel_generator.jpg/640px-Diesel_generator.jpg" class="gen-list-img" alt="Gen 2">
-        <span style="color:#94a3b8; font-size:20px; margin-right:10px;">›</span>
-    </div>
 
-    <div class="gen-list-item">
-        <div class="gen-info">
-            <h4>مولد رقم #3</h4>
-            <p>600 KVA</p>
-            <span style="color:#10b981; font-size:12px;">● يعمل</span>
-            <div class="sub-stats">
-                <span>⏱️ 8h 20m</span>
-                <span>⛽ 60%</span>
-            </div>
+        <!-- لوحة مدير المنصة (فاضية حالياً راح نعمرها بعدين) -->
+        <div id="adminDashboard" class="hidden" style="padding: 20px; text-align: center;">
+            <h2 style="color: #1e293b;">لوحة مدير المنصة 👑</h2>
+            <p style="margin-top: 20px;">هنا راح تشوف المولدات المشتركة والإيرادات.</p>
+            <button onclick="logout()" style="margin-top: 30px; padding: 10px 20px; border: none; background: #ef4444; color: white; border-radius: 8px;">خروج</button>
         </div>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Diesel_generator.jpg/640px-Diesel_generator.jpg" class="gen-list-img" alt="Gen 3">
-        <span style="color:#94a3b8; font-size:20px; margin-right:10px;">›</span>
-    </div>
 
-    <!-- الشريط السفلي -->
-    <div class="bottom-nav">
-        <button class="nav-btn active"><span class="nav-icon">🏠</span>الرئيسية</button>
-        <button class="nav-btn"><span class="nav-icon">📋</span>السجلات</button>
-        <div class="fab">+</div>
-        <button class="nav-btn"><span class="nav-icon">➕</span>إضافة مولد</button>
-        <button class="nav-btn"><span class="nav-icon">⚙️</span>المزيد</button>
     </div>
 
     <script src="app.js"></script>

@@ -7,8 +7,6 @@
     <!-- كود الـ PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0b1120">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2933/2933245.png">
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
@@ -16,11 +14,12 @@
         .hidden { display: none !important; }
 
         /* شاشة الدخول */
-        .auth-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 80vh; }
+        .auth-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 90vh; }
         .auth-box { background: #1e293b; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-top: 4px solid #f59e0b; text-align: center;}
         .auth-box h2 { color: #f59e0b; margin-bottom: 20px; }
         .auth-box input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 16px; margin-bottom: 15px; }
         .auth-btn { background: #10b981; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        .collector-btn { background: #f59e0b; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
         .auth-switch { color: #94a3b8; font-size: 14px; margin-top: 10px; cursor: pointer; text-decoration: underline; }
 
         /* التطبيق */
@@ -99,6 +98,8 @@
             <input type="password" id="authPassword" placeholder="كلمة المرور">
             <button class="auth-btn" id="authBtn" onclick="handleAuth()">دخول</button>
             <div class="auth-switch" onclick="toggleAuthMode()" id="authSwitch">ليس لديك حساب؟ إنشاء حساب جديد</div>
+            <hr style="margin: 15px 0; border-color: #334155;">
+            <button class="collector-btn" onclick="loginAsCollector()">👤 دخول الجابي (الموظف)</button>
         </div>
     </div>
 
@@ -180,10 +181,10 @@
 
     <script>
         var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-        // تم إضافة current_month للـ DB الافتراضي
-        var DB = { subs: [], payments: [], expenses: [], complaints: [], settings: { price_per_amp: 5000, status: true, is_active: true, owner_phone: '', work_hours: '6:00 ص - 12:00 م', current_month: 'الشهر الحالي' } };
+        var DB = { subs: [], payments: [], expenses: [], complaints: [], settings: { price_per_amp: 5000, status: true, is_active: true, owner_phone: '', work_hours: '6:00 ص - 12:00 م', current_month: 'الشهر الحالي', collector_pin: '1234' } };
         var currentUser = null;
         var isLoginMode = true;
+        var isCollector = false;
 
         async function checkAuth() {
             var { data: { session } } = await supabase.auth.getSession();
@@ -206,12 +207,32 @@
             if (isLoginMode) {
                 var { data, error } = await supabase.auth.signInWithPassword({ email: email, password: password });
                 if (error) alert('خطأ: ' + error.message);
-                else { currentUser = data.user; await showApp(); }
+                else { currentUser = data.user; isCollector = false; await showApp(); }
             } else {
                 var { data, error } = await supabase.auth.signUp({ email: email, password: password });
                 if (error) alert('خطأ: ' + error.message);
                 else { alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.'); toggleAuthMode(); }
             }
+        }
+
+        async function loginAsCollector() {
+            var pin = prompt("أدخل رمز الجابي (PIN) المكون من 4 أرقام:");
+            if (!pin) return;
+
+            var res = await supabase.from('settings').select('*').eq('collector_pin', pin).single();
+            
+            if (res.error || !res.data) {
+                alert('❌ الرمز غير صحيح. يرجى التواصل مع صاحب المولدة.');
+                return;
+            }
+
+            isCollector = true;
+            currentUser = { id: res.data.user_id };
+            await showApp();
+            
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('backBtn').classList.add('hidden');
+            openScreen('owner-invoices');
         }
 
         async function logout() {
@@ -223,6 +244,12 @@
             document.getElementById('authScreen').classList.add('hidden');
             document.getElementById('appScreen').classList.remove('hidden');
             await loadData();
+            
+            if(isCollector) {
+                document.getElementById('mainTitle').innerText = '👤 لوحة الجابي';
+                document.getElementById('dashboard-view').classList.add('hidden');
+                openScreen('owner-invoices');
+            }
         }
 
         async function loadData() {
@@ -232,25 +259,10 @@
             if (resSet.data) {
                 DB.settings = resSet.data;
                 if (DB.settings.is_active === false) {
-                    alert('⛔ عذراً، حسابك موقوف من قبل إدارة المنصة. يرجى التواصل مع الدعم.');
+                    alert('⛔ عذراً، حساب صاحب المولدة موقوف من قبل إدارة المنصة.');
                     await logout();
                     return;
                 }
-            } else {
-                var newSettings = { 
-                    id: Math.floor(Math.random() * 100000), 
-                    price_per_amp: 5000, 
-                    status: true, 
-                    is_active: true, 
-                    email: currentUser.email, 
-                    generator_name: 'مولد النور', 
-                    user_id: currentUser.id, 
-                    owner_phone: '07XXXXXXXXX', 
-                    work_hours: '6:00 ص - 12:00 م',
-                    current_month: 'الشهر الحالي'
-                };
-                await supabase.from('settings').insert([newSettings]);
-                DB.settings = newSettings;
             }
 
             var resSubs = await supabase.from('subscribers').select('*').eq('user_id', currentUser.id);
@@ -285,15 +297,13 @@
         }
 
         function goBack() {
+            if(isCollector) return;
             document.getElementById('inner-view').classList.add('hidden');
             document.getElementById('dashboard-view').classList.remove('hidden');
             document.getElementById('backBtn').classList.add('hidden');
             document.getElementById('mainTitle').innerText = '🔌 منصة إدارة المولدات';
         }
 
-        // ==========================================
-        // 1. شاشات صاحب المولد
-        // ==========================================
         async function renderOwnerHome() {
             await loadData();
             var total = 0;
@@ -405,13 +415,15 @@
             document.getElementById('qrModal').classList.remove('hidden');
         }
 
-        // تعديل الفواتير لتراعي الشهر الحالي
         async function renderInvoicesScreen() {
             await loadData();
             var price = DB.settings.price_per_amp;
             var currentMonth = DB.settings.current_month || 'الشهر الحالي';
             
-            var html = '<div class="inner-screen"><h2>💵 الفواتير</h2>';
+            var html = '<div class="inner-screen"><h2>💵 الفواتير والتحصيل</h2>';
+            if(isCollector) {
+                html += '<div class="stat-box" style="background:#0f172a; margin-bottom:15px; border:1px solid #f59e0b;"><h4 style="color:#f59e0b;">مرحباً أيها الجابي</h4><p style="font-size:14px; color:#94a3b8;">استلم المبالغ من المشتركين وسجلها هنا.</p></div>';
+            }
             html += '<div class="stat-box" style="background:#0f172a; margin-bottom:15px;"><h4>شهر الفوترة الحالي</h4><p style="color:#f59e0b;">' + currentMonth + '</p></div>';
             
             for (var i = 0; i < DB.subs.length; i++) {
@@ -419,9 +431,8 @@
                 var totalDue = s.amps * price;
                 var totalPaid = 0;
                 
-                // حساب المدفوع لهذا الشهر فقط
                 for (var j = 0; j < DB.payments.length; j++) {
-                    var pMonth = DB.payments[j].billing_month || 'الشهر الحالي'; // توافق مع الدفعات القديمة
+                    var pMonth = DB.payments[j].billing_month || 'الشهر الحالي';
                     if (DB.payments[j].sub_id === s.id && pMonth === currentMonth) {
                         totalPaid += Number(DB.payments[j].amount);
                     }
@@ -439,10 +450,12 @@
                 } else {
                     html += '<div style="flex:1; text-align:center; color:#10b981; font-weight:bold; padding-top:8px;">✅ مكتمل</div>';
                 }
-                html += '<button class="btn-blue" style="font-size:14px;" onclick="showPaymentHistory(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">📜 السجل</button>';
-
-                if (totalPaid > 0) {
-                    html += '<button class="btn-warning" style="flex:1; font-size:14px;" onclick="cancelLastPayment(&quot;' + s.id + '&quot;)">إلغاء آخر دفعة</button>';
+                
+                if(!isCollector) {
+                    html += '<button class="btn-blue" style="font-size:14px;" onclick="showPaymentHistory(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">📜 السجل</button>';
+                    if (totalPaid > 0) {
+                        html += '<button class="btn-warning" style="flex:1; font-size:14px;" onclick="cancelLastPayment(&quot;' + s.id + '&quot;)">إلغاء آخر دفعة</button>';
+                    }
                 }
                 html += '</div></div>';
             }
@@ -481,7 +494,7 @@
                 method: 'cash', 
                 status: 'paid', 
                 user_id: currentUser.id,
-                billing_month: currentMonth // تسجيل الدفعة للشهر الحالي
+                billing_month: currentMonth 
             }]);
             renderInvoicesScreen();
         }
@@ -571,7 +584,6 @@
             document.getElementById('inner-view').innerHTML = html;
         }
 
-        // تعديل الإشعار الجماعي ليراعي الشهر الحالي
         function broadcastToDebtors() {
             var listDiv = document.getElementById('broadcastList');
             listDiv.innerHTML = '';
@@ -606,11 +618,9 @@
             renderMessagesScreen();
         }
 
-        // إضافة زر بدء شهر جديد في الإعدادات
         async function renderSettingsScreen() {
             var html = '<div class="inner-screen"><h2>⚙️ الإعدادات</h2>';
             
-            // قسم الفوترة الشهرية
             html += '<div class="stat-box" style="background:#0f172a; border:1px solid #f59e0b; margin-bottom:20px;">';
             html += '<h4>الشهر الحالي للفوترة</h4>';
             html += '<p style="color:#f59e0b;">' + (DB.settings.current_month || 'الشهر الحالي') + '</p>';
@@ -621,6 +631,7 @@
             html += '<div class="input-group"><label>رقم هاتف صاحب المولدة:</label><input type="text" id="inpOwnerPhone" class="input-field" value="' + (DB.settings.owner_phone || '') + '"></div>';
             html += '<div class="input-group"><label>أوقات العمل:</label><input type="text" id="inpWorkHours" class="input-field" value="' + (DB.settings.work_hours || '') + '"></div>';
             html += '<div class="input-group"><label>سعر الأمبير:</label><input type="number" id="inpPrice" class="input-field" value="' + DB.settings.price_per_amp + '"></div>';
+            html += '<div class="input-group"><label>رمز دخول الجابي (PIN):</label><input type="text" id="inpPin" class="input-field" value="' + (DB.settings.collector_pin || '1234') + '"></div>';
             html += '<button class="btn-save" onclick="saveSettings()">حفظ الإعدادات</button></div>';
             document.getElementById('inner-view').innerHTML = html;
         }
@@ -630,23 +641,25 @@
             var newPhone = document.getElementById('inpOwnerPhone').value;
             var newHours = document.getElementById('inpWorkHours').value;
             var newPrice = document.getElementById('inpPrice').value;
+            var newPin = document.getElementById('inpPin').value;
             
             await supabase.from('settings').update({ 
                 generator_name: newName,
                 owner_phone: newPhone,
                 work_hours: newHours,
-                price_per_amp: newPrice 
+                price_per_amp: newPrice,
+                collector_pin: newPin
             }).eq('id', DB.settings.id);
             
             DB.settings.generator_name = newName;
             DB.settings.owner_phone = newPhone;
             DB.settings.work_hours = newHours;
             DB.settings.price_per_amp = newPrice;
+            DB.settings.collector_pin = newPin;
             
             alert('تم حفظ الإعدادات بنجاح');
         }
 
-        // دالة بدء شهر جديد
         async function startNewMonth() {
             var newMonth = prompt("أدخل اسم الشهر الجديد (مثال: يونيو 2024):\nتحذير: سيتم تصفير فواتير جميع المشتركين للشهر الجديد.", "الشهر الجديد");
             if (!newMonth) return;
@@ -657,9 +670,6 @@
             renderSettingsScreen();
         }
 
-        // ==========================================
-        // 2. لوحة مالك المنصة
-        // ==========================================
         async function renderAdminHome() {
             var innerView = document.getElementById('inner-view');
             innerView.innerHTML = '<div class="inner-screen" style="border-top-color:#eab308;"><h2 style="color:#eab308;">👑 لوحة المالك</h2><p style="text-align:center;">جاري جلب الإحصائيات...</p></div>';
@@ -758,9 +768,6 @@
             innerView.innerHTML = html;
         }
 
-        // ==========================================
-        // 3. واجهة المواطن
-        // ==========================================
         async function renderCitizenInvoice() {
             var urlParams = new URLSearchParams(window.location.search);
             var citizenId = urlParams.get('citizen');
@@ -838,13 +845,6 @@
                 alert('✅ تم إرسال شكواك بنجاح، سيتم مراجعتها من قبل صاحب المولدة.');
                 document.getElementById('complaintText').value = '';
             }
-        }
-
-        // تسجيل Service Worker بسيط للـ PWA (اختياري لتحسين الأداء، لكن الـ manifest يكفي للزر)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // يمكن إضافة ملف sw.js هنا لاحقاً إذا أردت العمل بدون إنترنت
-            });
         }
 
         document.addEventListener('DOMContentLoaded', checkAuth);

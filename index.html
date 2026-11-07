@@ -3,71 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>أبو المولد</title>
+    <title>مولدتي - النظام الشامل</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background: #f4f7fb; }
+        body { background: #f4f7fb; padding-bottom: 80px; color: #0f172a; }
         .hidden { display: none !important; }
-
-        /* شاشة البداية */
+        
+        /* شاشة الدخول */
         .login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; padding: 20px; }
         .login-screen h1 { color: #0f172a; margin-bottom: 40px; font-size: 32px; }
         .role-btn { width: 100%; max-width: 300px; padding: 20px; margin-bottom: 15px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; cursor: pointer; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .role-btn.citizen { background: #3b82f6; }
         .role-btn.owner { background: #f59e0b; }
+        .role-btn.citizen { background: #3b82f6; }
         .role-btn.admin { background: #1e293b; }
 
-        /* لوحة صاحب المولد (اللي سويناها) */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #fff; }
-        .main-card { background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 24px; margin: 20px; padding: 20px; color: white; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 15px 0; border-top-left-radius: 20px; border-top-right-radius: 20px; }
-        .nav-btn { background: none; border: none; font-size: 12px; font-weight: bold; color: #94a3b8; cursor: pointer; }
-        .nav-btn.active { color: #3b82f6; }
+        /* الشريط العلوي */
+        .top-bar { background: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
+        .top-bar h2 { font-size: 18px; }
+        .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        /* المحتوى */
+        .content { padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .card h3 { font-size: 16px; color: #64748b; margin-bottom: 15px; }
+        .stat-num { font-size: 32px; font-weight: bold; color: #f59e0b; }
+        
+        /* المشتركين */
+        .sub-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+        .sub-info h4 { font-size: 16px; margin-bottom: 5px; }
+        .sub-info p { font-size: 13px; color: #64748b; }
+        .btn-danger { background: #fee2e2; color: #ef4444; border: none; padding: 8px; border-radius: 8px; cursor: pointer; }
+        .btn-add { background: #10b981; color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
+
+        /* الشريط السفلي */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #e2e8f0; z-index: 10; }
+        .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; font-size: 11px; font-weight: bold; color: #94a3b8; cursor: pointer; gap: 4px; }
+        .nav-btn.active { color: #f59e0b; }
+        .nav-btn span { font-size: 20px; }
     </style>
 </head>
 <body>
-    <!-- شاشة البداية (تختار منها منو أنت) -->
+    <!-- 1. شاشة الدخول -->
     <div id="loginScreen" class="login-screen">
         <h1>مرحباً بك 👋</h1>
-        <button class="role-btn owner" onclick="enterApp('owner')">⚡ صاحب المولد</button>
-        <button class="role-btn citizen" onclick="enterApp('citizen')">👤 المواطن</button>
-        <button class="role-btn admin" onclick="enterApp('admin')">👑 مدير المنصة</button>
+        <button class="role-btn owner" onclick="login('owner')">⚡ صاحب المولد</button>
+        <button class="role-btn citizen" onclick="login('citizen')">👤 المواطن</button>
+        <button class="role-btn admin" onclick="login('admin')">👑 مدير المنصة</button>
     </div>
 
-    <!-- شاشة التطبيق (تفتح لما تختار) -->
-    <div id="appScreen" class="hidden" style="padding-bottom: 80px;">
-        
-        <!-- لوحة صاحب المولد -->
-        <div id="ownerDashboard">
-            <div class="top-bar">
-                <h2 style="color: #0f172a;">أبو المولد ⚡</h2>
-                <button onclick="logout()" style="border:none; background:#ef4444; color:white; padding:8px; border-radius:8px;">خروج</button>
-            </div>
-            <div class="main-card">
-                <h2>مولد رقم #1</h2>
-                <p style="margin-top: 10px; color: #94a3b8;">قدرة المولد: 500 KVA</p>
-            </div>
-            <div style="padding: 20px; text-align: center; color: #64748b;">
-                <h3>أهلاً بك يا صاحب المولد</h3>
-                <p>هنا تقدر تدير مشتركينك وتحصلك.</p>
-            </div>
+    <!-- 2. شاشة التطبيق -->
+    <div id="appScreen" class="hidden">
+        <div class="top-bar">
+            <h2 id="pageTitle">الرئيسية</h2>
+            <button class="logout-btn" onclick="logout()">خروج</button>
         </div>
 
-        <!-- لوحة المواطن (فاضية حالياً راح نعمرها بعدين) -->
-        <div id="citizenDashboard" class="hidden" style="padding: 20px; text-align: center;">
-            <h2 style="color: #3b82f6;">لوحة المواطن 👤</h2>
-            <p style="margin-top: 20px;">هنا راح تشوف فاتورتك وحالة المولدة.</p>
-            <button onclick="logout()" style="margin-top: 30px; padding: 10px 20px; border: none; background: #ef4444; color: white; border-radius: 8px;">خروج</button>
-        </div>
+        <!-- محتوى الصفحات (يتم تعبئته بالجافاسكربت) -->
+        <div class="content" id="mainContent"></div>
 
-        <!-- لوحة مدير المنصة (فاضية حالياً راح نعمرها بعدين) -->
-        <div id="adminDashboard" class="hidden" style="padding: 20px; text-align: center;">
-            <h2 style="color: #1e293b;">لوحة مدير المنصة 👑</h2>
-            <p style="margin-top: 20px;">هنا راح تشوف المولدات المشتركة والإيرادات.</p>
-            <button onclick="logout()" style="margin-top: 30px; padding: 10px 20px; border: none; background: #ef4444; color: white; border-radius: 8px;">خروج</button>
-        </div>
+        <!-- الشريط السفلي (يتم تعبئته بالجافاسكربت) -->
+        <div class="bottom-nav" id="bottomNav"></div>
+    </div>
 
+    <!-- 3. نافذة الإضافة (Modal) -->
+    <div id="modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; padding: 20px;">
+        <div class="card" style="width: 100%; max-width: 400px; text-align: center;" id="modalContent"></div>
     </div>
 
     <script src="app.js"></script>

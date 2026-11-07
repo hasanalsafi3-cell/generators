@@ -31,6 +31,8 @@ function goTo(pageName) {
 
     if (pageName === 'إدارة المشتركين') {
         renderSubscribersScreen();
+    } else if (pageName === 'التحصيل') {
+        renderCollectionScreen();
     } else {
         screenView.innerHTML = '<div class="inner-screen"><h2>' + pageName + '</h2><p style="text-align:center;">هذه الشاشة قيد التطوير...</p></div>';
     }
@@ -41,10 +43,12 @@ function goBack() {
     document.getElementById('screen-view').classList.add('hidden');
     document.getElementById('dashboard-view').classList.remove('hidden');
     document.getElementById('backBtn').classList.add('hidden');
-    loadData(); // تحديث الأرقام عند الرجوع
+    loadData(); 
 }
 
-// 4. بناء شاشة المشتركين (إضافة وقائمة)
+// ==========================================
+// 4. شاشة إدارة المشتركين (التي بنيناها سابقاً)
+// ==========================================
 async function renderSubscribersScreen() {
     var screenView = document.getElementById('screen-view');
     screenView.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
@@ -55,14 +59,12 @@ async function renderSubscribersScreen() {
     var html = '<div class="inner-screen">';
     html += '<h2>👥 إدارة المشتركين</h2>';
 
-    // --- فورم الإضافة ---
     html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px;">';
     html += '<div class="input-group"><label>اسم المشترك:</label><input type="text" id="inpName" class="input-field" placeholder="مثال: أبو أحمد"></div>';
     html += '<div class="input-group"><label>عدد الأمبير:</label><input type="number" id="inpAmps" class="input-field" value="5"></div>';
     html += '<button class="btn-save" onclick="addNewSub()">+ حفظ المشترك في السحابة</button>';
     html += '</div>';
 
-    // --- قائمة المشتركين ---
     html += '<h3 style="margin-bottom:15px; color:#94a3b8;">القائمة الحالية (' + subsList.length + ')</h3>';
     if (subsList.length === 0) {
         html += '<p style="text-align:center; color:#64748b;">لا يوجد مشتركين مسجلين.</p>';
@@ -79,34 +81,91 @@ async function renderSubscribersScreen() {
     screenView.innerHTML = html;
 }
 
-// 5. إضافة مشترك جديد
 async function addNewSub() {
     var name = document.getElementById('inpName').value;
     var amps = document.getElementById('inpAmps').value;
-
-    if (!name || !amps) {
-        return alert('الرجاء إدخال الاسم وعدد الأمبير');
-    }
-
-    // إرسال البيانات للسحابة
+    if (!name || !amps) return alert('الرجاء إدخال الاسم وعدد الأمبير');
     var res = await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '-' }]);
-    
-    if (res.error) {
-        alert('خطأ في الحفظ: ' + res.error.message);
-    } else {
-        alert('✅ تم إضافة المشترك بنجاح!');
-        renderSubscribersScreen(); // تحديث القائمة فوراً
-    }
+    if (res.error) { alert('خطأ في الحفظ: ' + res.error.message); } 
+    else { alert('✅ تم إضافة المشترك بنجاح!'); renderSubscribersScreen(); }
 }
 
-// 6. حذف مشترك
 async function deleteSubscriber(id) {
     if (!confirm('هل أنت متأكد من حذف هذا المشترك نهائياً؟')) return;
-
     var res = await supabase.from('subscribers').delete().eq('id', id);
+    if (res.error) { alert('خطأ في الحذف: ' + res.error.message); } 
+    else { renderSubscribersScreen(); }
+}
+
+// ==========================================
+// 5. شاشة التحصيل الجديدة (الفلوس)
+// ==========================================
+async function renderCollectionScreen() {
+    var screenView = document.getElementById('screen-view');
+    screenView.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
+
+    // نجلب المشتركين
+    var resSubs = await supabase.from('subscribers').select('*');
+    if (resSubs.data) subsList = resSubs.data;
+
+    // نجلب الدفعات عشان نعرف منو دفع
+    var resPays = await supabase.from('payments').select('*');
+    var pays = resPays.data || [];
+
+    var pricePerAmp = 5000; // سعر الأمبير (ممكن نخليه يعدله من الإعدادات لاحقاً)
+
+    var html = '<div class="inner-screen" style="border-top-color: #10b981;">';
+    html += '<h2 style="color: #10b981;">💵 التحصيل والمدفوعات</h2>';
+
+    if (subsList.length === 0) {
+        html += '<p style="text-align:center; color:#64748b;">أضف مشتركين أولاً من شاشة الإدارة.</p>';
+    }
+
+    for (var i = 0; i < subsList.length; i++) {
+        var s = subsList[i];
+        var amountDue = s.amps * pricePerAmp;
+        
+        // نتأكد إذا المشترك دافع (نبحث في جدول الدفعات)
+        var hasPaid = false;
+        for(var j=0; j<pays.length; j++) {
+            if(pays[j].sub_id === s.id && pays[j].status === 'paid') {
+                hasPaid = true;
+                break;
+            }
+        }
+
+        html += '<div class="sub-list-item" style="border-right: 4px solid ' + (hasPaid ? '#10b981' : '#ef4444') + ';">';
+        html += '<div>';
+        html += '<b style="font-size:16px;">' + s.name + '</b><br>';
+        html += '<span style="color:#94a3b8; font-size:13px;">المطلوب: ' + amountDue.toLocaleString() + ' د.ع</span>';
+        html += '</div>';
+
+        if (hasPaid) {
+            html += '<span style="color:#10b981; font-weight:bold; font-size:14px;">✅ مسدد</span>';
+        } else {
+            html += '<button class="btn-save" style="width: auto; padding: 8px 15px; font-size:14px;" onclick="collectPayment(&quot;' + s.id + '&quot;, ' + amountDue + ')">استلمت كاش</button>';
+        }
+        html += '</div>';
+    }
+
+    html += '</div>';
+    screenView.innerHTML = html;
+}
+
+async function collectPayment(subId, amount) {
+    if (!confirm('هل أنت متأكد من استلام مبلغ ' + amount.toLocaleString() + ' د.ع نقداً؟')) return;
+
+    var res = await supabase.from('payments').insert([{ 
+        sub_id: subId, 
+        amount: amount, 
+        method: 'cash', 
+        status: 'paid' 
+    }]);
+
     if (res.error) {
-        alert('خطأ في الحذف: ' + res.error.message);
+        alert('خطأ في تسجيل الدفع: ' + res.error.message);
     } else {
-        renderSubscribersScreen(); // تحديث القائمة
+        alert('✅ تم تسجيل الدفعة بنجاح!');
+        renderCollectionScreen(); // تحديث الشاشة عشان يتحول للأخضر
     }
 }

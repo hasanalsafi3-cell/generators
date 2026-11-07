@@ -1,102 +1,1067 @@
-async function renderAdminHome() {
-    var innerView = document.getElementById('inner-view');
-    
-    // جلب البيانات لجميع الحسابات
-    var resSettings = await supabase.from('settings').select('*');
-    var resSubs = await supabase.from('subscribers').select('*');
-    var resPays = await supabase.from('payments').select('*');
-    var resComp = await supabase.from('complaints').select('*');
-    var resStats = await supabase.from('platform_settings').select('*').eq('id', 1).single();
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة إدارة المولدات</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b1120">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #0b1120; color: #f8fafc; min-height: 100vh; padding: 20px; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); padding-bottom: 50px;}
+        .hidden { display: none !important; }
 
-    var allGens = resSettings.data || [];
-    var allSubs = resSubs.data || [];
-    var allPays = resPays.data || [];
-    var allComps = resComp.data || [];
-    var stats = resStats.data || { growth_subs: '+15%', growth_rev: '+22%', map_note: '🗺️', chart_data: '30,50,40,70,85,100' };
+        /* شاشة الدخول */
+        .auth-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 90vh; }
+        .auth-box { background: #1e293b; padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-top: 4px solid #f59e0b; text-align: center;}
+        .auth-box h2 { color: #f59e0b; margin-bottom: 20px; }
+        .auth-box input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 16px; margin-bottom: 15px; }
+        .auth-btn { background: #10b981; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        .collector-btn { background: #f59e0b; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        .auth-switch { color: #94a3b8; font-size: 14px; margin-top: 10px; cursor: pointer; text-decoration: underline; }
 
-    var totalGens = allGens.length;
-    var totalSubs = allSubs.length;
-    var activeGens = 0;
-    var inactiveGens = 0;
-    for(var i=0; i<allGens.length; i++) {
-        if(allGens[i].is_active !== false) activeGens++;
-        else inactiveGens++;
-    }
-    
-    var totalRevenue = 0;
-    for(var j=0; j<allPays.length; j++) totalRevenue += Number(allPays[j].amount);
+        /* التطبيق */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(30, 41, 59, 0.8); border-radius: 15px; margin-bottom: 30px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .top-bar h1 { font-size: 24px; color: #f8fafc; }
+        .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .back-btn { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
 
-    var openComps = 0;
-    for(var k=0; k<allComps.length; k++) if(allComps[k].status === 'open') openComps++;
+        .dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; }
+        .panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; width: 100%; max-width: 380px; border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 8px 32px 0 rgba(0,0,0,0.4); }
+        .panel.owner { border-top: 4px solid #f59e0b; }
+        .panel.admin { border-top: 4px solid #eab308; }
+        .panel.citizen { border-top: 4px solid #3b82f6; }
+        .panel-header h2 { font-size: 22px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+        .panel.owner .panel-header h2 { color: #f59e0b; }
+        .panel.admin .panel-header h2 { color: #eab308; }
+        .panel.citizen .panel-header h2 { color: #3b82f6; }
 
-    var html = '<div class="inner-screen" style="border-top-color:#eab308; max-width: 1000px;"><h2 style="color:#eab308;">👑 إدارة المنصة</h2>';
+        .card-item { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 12px 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; }
+        .card-item:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+        .card-text { text-align: right; width: 100%; }
+        .card-text h4 { font-size: 15px; margin-bottom: 4px; color: #e2e8f0; }
+        .card-text p { font-size: 12px; color: #94a3b8; }
+        .card-icon { font-size: 24px; margin-right: 15px; }
 
-    html += '<div class="admin-sections">';
-    html += '<button class="active">لوحة التحكم</button>';
-    html += '<button onclick="alert(\'قائمة أصحاب المولدات\')">إدارة أصحاب المولدات</button>';
-    html += '<button onclick="alert(\'قائمة المشتركين\')">إدارة المشتركين</button>';
-    html += '<button onclick="alert(\'الطلبات الجديدة\')">الطلبات الجديدة</button>';
-    html += '<button onclick="alert(\'التقارير\')">التقارير والإحصائيات</button>';
-    html += '<button onclick="alert(\'المالية\')">الإدارة المالية</button>';
-    html += '<button onclick="alert(\'الإشعارات\')">الإشعارات</button>';
-    html += '<button onclick="alert(\'الإعدادات\')">الإعدادات</button>';
-    html += '</div>';
+        /* الشاشات الداخلية */
+        .inner-screen { background: rgba(30, 41, 59, 0.95); border-radius: 20px; padding: 20px; max-width: 900px; margin: 0 auto; border-top: 4px solid #f59e0b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .inner-screen h2 { color: #f59e0b; margin-bottom: 20px; font-size: 22px;}
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 14px; }
+        .input-field { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 16px; }
+        
+        .btn-save { background: #10b981; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px;}
+        .btn-danger { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;}
+        .btn-blue { background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;}
+        .btn-warning { background: #f59e0b; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;}
+        .btn-green { background: #25D366; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; text-decoration: none; display: inline-block; text-align: center;}
+        
+        .list-item { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+        .stat-box { background:#1e293b; padding:15px; border-radius:10px; text-align:center; margin-bottom:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+        .stat-box h4 { color:#94a3b8; font-size:14px; margin-bottom:5px;}
+        .stat-box p { color:#f8fafc; font-size:24px; font-weight:bold;}
+        .stat-box .status-btn { width: 100%; margin-top: 10px; padding: 15px; border-radius: 10px; border: none; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
 
-    // أزرار الإجراءات السريعة (تفاعلية)
-    html += '<div class="admin-actions">';
-    html += '<button style="background:#3b82f6;" onclick="document.getElementById(\'addOwnerModal\').classList.remove(\'hidden\')">➕ إضافة صاحب مولد</button>';
-    html += '<button style="background:#10b981;" onclick="alert(\'قريباً\')">➕ إضافة مولد جديد</button>';
-    html += '<button style="background:#f59e0b;" onclick="document.getElementById(\'broadcastModal\').classList.remove(\'hidden\')">📢 إرسال إشعار جماعي</button>';
-    html += '</div>';
+        /* النوافذ المنبثقة */
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px;}
+        .modal-box { background: #1e293b; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; text-align: center; border-top: 4px solid #3b82f6; max-height: 90vh; overflow-y: auto;}
 
-    html += '<div class="admin-grid">';
-    html += '<div class="admin-card"><h4>إجمالي المولدات</h4><p>' + totalGens + '</p></div>';
-    html += '<div class="admin-card"><h4>إجمالي المشتركين</h4><p>' + totalSubs + '</p></div>';
-    html += '<div class="admin-card" style="border-top-color:#10b981;"><h4>المولدات العاملة</h4><p style="color:#10b981;">' + activeGens + '</p></div>';
-    html += '<div class="admin-card" style="border-top-color:#ef4444;"><h4>المولدات المتوقفة</h4><p style="color:#ef4444;">' + inactiveGens + '</p></div>';
-    html += '<div class="admin-card"><h4>الإيرادات الشهرية</h4><p>' + totalRevenue.toLocaleString() + '</p></div>';
-    html += '<div class="admin-card" style="border-top-color:#ef4444;"><h4>الشكاوى المفتوحة</h4><p style="color:#ef4444;">' + openComps + '</p></div>';
-    html += '</div>';
+        /* لوحة المالك */
+        .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .admin-card { background: #1e293b; padding: 15px; border-radius: 12px; text-align: center; border-top: 3px solid #eab308; }
+        .admin-card h4 { font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
+        .admin-card p { font-size: 20px; font-weight: bold; color: #f8fafc; }
+        .admin-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .admin-actions button { flex: 1; min-width: 120px; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; color: white; font-size: 13px; }
+        .admin-sections { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; }
+        .admin-sections button { background: transparent; border: none; color: #94a3b8; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap; padding-bottom: 5px; }
+        .admin-sections button.active { color: #eab308; border-bottom: 2px solid #eab308; }
 
-    html += '<div style="background:#0f172a; padding:15px; border-radius:10px; margin-bottom:20px;">';
-    html += '<h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">نسبة النمو (هذا الشهر)</h4>';
-    html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;"><span>المشتركين</span><span style="color:#10b981;">' + stats.growth_subs + ' ↗</span></div>';
-    html += '<div style="display:flex; justify-content:space-between; font-size:13px;"><span>الإيرادات</span><span style="color:#10b981;">' + stats.growth_rev + ' ↗</span></div>';
-    html += '</div>';
+        /* الرسوم البيانية */
+        .chart-container { display: flex; gap: 10px; align-items: flex-end; height: 120px; background: #0f172a; padding: 10px; border-radius: 10px; margin-bottom: 20px; }
+        .chart-bar { flex: 1; background: #3b82f6; border-radius: 4px 4px 0 0; position: relative; min-width: 20px;}
+        .chart-bar span { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #94a3b8; }
+        .map-placeholder { background: #0f172a; height: 150px; border-radius: 10px; display: flex; justify-content: center; align-items: center; color: #64748b; margin-bottom: 20px; border: 1px dashed #334155; }
 
-    html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:20px;">';
-    html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">خريطة المولدات</h4>';
-    html += '<div class="map-placeholder">' + stats.map_note + '</div></div>';
-    
-    var chartData = (stats.chart_data || '30,50,40,70,85,100').split(',');
-    html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">إحصائيات الإيرادات (آخر 6 أشهر)</h4>';
-    html += '<div class="chart-container">';
-    html += '<div class="chart-bar" style="height:' + chartData[0] + '%;"><span>1</span></div>';
-    html += '<div class="chart-bar" style="height:' + chartData[1] + '%;"><span>2</span></div>';
-    html += '<div class="chart-bar" style="height:' + chartData[2] + '%;"><span>3</span></div>';
-    html += '<div class="chart-bar" style="height:' + chartData[3] + '%;"><span>4</span></div>';
-    html += '<div class="chart-bar" style="height:' + chartData[4] + '%;"><span>5</span></div>';
-    html += '<div class="chart-bar" style="height:' + chartData[5] + '%; background:#10b981;"><span>6</span></div>';
-    html += '</div></div>';
-    html += '</div>';
+        @media (max-width: 768px) { .dashboard-grid { flex-direction: column; align-items: center; } }
+    </style>
+</head>
+<body>
 
-    html += '<div style="display:flex; flex-wrap:wrap; gap:15px;">';
-    html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">آخر عمليات الدفع</h4>';
-    if(allPays.length === 0) html += '<p style="color:#64748b; font-size:13px;">لا يوجد دفعات.</p>';
-    for(var p=Math.max(0, allPays.length-3); p<allPays.length; p++) {
-        html += '<div class="list-item" style="padding:10px;"><span>دفعة جديدة</span><b style="color:#10b981;">' + Number(allPays[p].amount).toLocaleString() + ' د.ع</b></div>';
-    }
-    html += '</div>';
+    <!-- 1. شاشة الدخول -->
+    <div id="authScreen" class="auth-screen hidden">
+        <div class="auth-box">
+            <h2 id="authTitle">تسجيل الدخول</h2>
+            <input type="email" id="authEmail" placeholder="البريد الإلكتروني">
+            <input type="password" id="authPassword" placeholder="كلمة المرور">
+            <button class="auth-btn" id="authBtn" onclick="handleAuth()">دخول</button>
+            <div class="auth-switch" onclick="toggleAuthMode()" id="authSwitch">ليس لديك حساب؟ إنشاء حساب جديد</div>
+            <hr style="margin: 15px 0; border-color: #334155;">
+            <button class="collector-btn" onclick="loginAsCollector()">👤 دخول الجابي (الموظف)</button>
+        </div>
+    </div>
 
-    html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">آخر الشكاوى</h4>';
-    if(allComps.length === 0) html += '<div class="list-item" style="padding:10px;"><span style="color:#64748b;">لا توجد شكاوى حديثة</span><span style="color:#10b981;">-</span></div>';
-    else {
-        for(var c=Math.max(0, allComps.length-3); c<allComps.length; c++) {
-            html += '<div class="list-item" style="padding:10px;"><span>' + allComps[c].text + '</span><span style="color:' + (allComps[c].status === 'open' ? '#ef4444' : '#10b981') + ';">' + (allComps[c].status === 'open' ? 'مفتوحة' : 'مغلقة') + '</span></div>';
+    <!-- 2. واجهة التطبيق -->
+    <div id="appScreen" class="hidden">
+        <div class="top-bar">
+            <h1 id="mainTitle">🔌 منصة إدارة المولدات</h1>
+            <div>
+                <button id="backBtn" class="back-btn hidden" onclick="goBack()">↩ رجوع</button>
+                <button class="logout-btn" onclick="logout()">خروج</button>
+            </div>
+        </div>
+
+        <div id="dashboard-view" class="dashboard-grid">
+            <!-- صاحب المولد -->
+            <div class="panel owner">
+                <div class="panel-header"><h2>صاحب المولد ⚡</h2></div>
+                <div class="card-item" onclick="openScreen('owner-home')"><div class="card-text"><h4>1. الرئيسية</h4></div><div class="card-icon">📊</div></div>
+                <div class="card-item" onclick="openScreen('owner-subs')"><div class="card-text"><h4>2. إدارة المشتركين</h4></div><div class="card-icon">👥</div></div>
+                <div class="card-item" onclick="openScreen('owner-invoices')"><div class="card-text"><h4>3. الفواتير والتحصيل</h4></div><div class="card-icon">💵</div></div>
+                <div class="card-item" onclick="openScreen('owner-generator')"><div class="card-text"><h4>4. إدارة المولد</h4></div><div class="card-icon">⚙️</div></div>
+                <div class="card-item" onclick="openScreen('owner-fuel')"><div class="card-text"><h4>5. الوقود</h4></div><div class="card-icon">⛽</div></div>
+                <div class="card-item" onclick="openScreen('owner-reports')"><div class="card-text"><h4>6. التقارير</h4></div><div class="card-icon">📈</div></div>
+                <div class="card-item" onclick="openScreen('owner-messages')"><div class="card-text"><h4>7. الرسائل والشكاوى</h4></div><div class="card-icon">💬</div></div>
+                <div class="card-item" onclick="openScreen('owner-settings')"><div class="card-text"><h4>8. الإعدادات</h4></div><div class="card-icon">⚙️</div></div>
+            </div>
+            <!-- مالك المنصة -->
+            <div class="panel admin">
+                <div class="panel-header"><h2>مالك المنصة 👑</h2></div>
+                <div class="card-item" onclick="openScreen('admin-home')"><div class="card-text"><h4>لوحة التحكم الشاملة</h4><p>إحصائيات، مولدات، إيرادات</p></div><div class="card-icon">📈</div></div>
+            </div>
+            <!-- المواطن -->
+            <div class="panel citizen">
+                <div class="panel-header"><h2>المواطن 👤</h2></div>
+                <div class="card-item" onclick="openScreen('citizen-invoice')"><div class="card-text"><h4>عرض الفاتورة (تجريبي)</h4></div><div class="card-icon">🧾</div></div>
+            </div>
+        </div>
+
+        <div id="inner-view" class="hidden"></div>
+    </div>
+
+    <!-- نافذة الـ QR والواتساب -->
+    <div id="qrModal" class="modal hidden">
+        <div class="modal-box">
+            <h3 style="color:#3b82f6; margin-bottom:15px;">رابط المواطن (QR)</h3>
+            <div id="qrImageContainer" style="background:white; padding:10px; border-radius:10px; display:inline-block; margin-bottom:15px;"></div>
+            <p style="font-size:13px; color:#94a3b8; margin-bottom:15px;">امسح الكود، أو أرسله للمواطن ليدخل على فاتورته.</p>
+            <a id="waLink" href="#" target="_blank" class="btn-green" style="display:block; margin-bottom:10px;">📲 إرسال عبر واتساب</a>
+            <button onclick="document.getElementById('qrModal').classList.add('hidden')" class="btn-danger" style="width:100%;">إغلاق</button>
+        </div>
+    </div>
+
+    <!-- نافذة تعديل المشترك -->
+    <div id="editSubModal" class="modal hidden">
+        <div class="modal-box" style="border-top-color:#f59e0b;">
+            <h3 style="color:#f59e0b; margin-bottom:15px;">تعديل بيانات المشترك</h3>
+            <div class="input-group" style="text-align:right;">
+                <label>رقم الاشتراك:</label>
+                <input type="text" id="editSubNum" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>اسم المشترك:</label>
+                <input type="text" id="editSubName" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>عدد الأمبير:</label>
+                <input type="number" id="editSubAmps" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>رقم الهاتف:</label>
+                <input type="text" id="editSubPhone" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>العنوان:</label>
+                <input type="text" id="editSubAddress" class="input-field">
+            </div>
+            <div class="input-group" style="text-align:right;">
+                <label>حالة الاشتراك:</label>
+                <select id="editSubStatus" class="input-field">
+                    <option value="active">نشط</option>
+                    <option value="suspended">موقوف</option>
+                </select>
+            </div>
+            <input type="hidden" id="editSubId">
+            <button class="btn-save" style="margin-top:10px;" onclick="saveEditedSub()">حفظ التعديلات</button>
+            <button onclick="document.getElementById('editSubModal').classList.add('hidden')" class="btn-danger" style="width:100%;">إلغاء</button>
+        </div>
+    </div>
+
+    <script>
+        var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+        var DB = { subs: [], payments: [], expenses: [], complaints: [], invoices: [], settings: { price_per_amp: 5000, status: true, is_active: true, owner_phone: '', work_hours: '6:00 ص - 12:00 م', current_month: 'الشهر الحالي', collector_pin: '1234' } };
+        var currentUser = null;
+        var isLoginMode = true;
+        var isCollector = false;
+        
+        var reportPeriod = 'month';
+        var customFrom = '';
+        var customTo = '';
+
+        async function checkAuth() {
+            var { data: { session } } = await supabase.auth.getSession();
+            if (session) { currentUser = session.user; await showApp(); } 
+            else { document.getElementById('authScreen').classList.remove('hidden'); }
         }
-    }
-    html += '</div>';
-    html += '</div>';
-    html += '</div>';
-    innerView.innerHTML = html;
-}
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authTitle').innerText = isLoginMode ? 'تسجيل الدخول' : 'إنشاء حساب جديد';
+            document.getElementById('authBtn').innerText = isLoginMode ? 'دخول' : 'إنشاء الحساب';
+            document.getElementById('authSwitch').innerText = isLoginMode ? 'ليس لديك حساب؟ إنشاء حساب جديد' : 'لديك حساب بالفعل؟ تسجيل الدخول';
+        }
+
+        async function handleAuth() {
+            var email = document.getElementById('authEmail').value;
+            var password = document.getElementById('authPassword').value;
+            if(!email || !password) return alert('أدخل الإيميل والباسورد');
+
+            if (isLoginMode) {
+                var { data, error } = await supabase.auth.signInWithPassword({ email: email, password: password });
+                if (error) alert('خطأ: ' + error.message);
+                else { currentUser = data.user; isCollector = false; await showApp(); }
+            } else {
+                var { data, error } = await supabase.auth.signUp({ email: email, password: password });
+                if (error) alert('خطأ: ' + error.message);
+                else { alert('تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.'); toggleAuthMode(); }
+            }
+        }
+
+        async function loginAsCollector() {
+            var pin = prompt("أدخل رمز الجابي (PIN) المكون من 4 أرقام:");
+            if (!pin) return;
+
+            var res = await supabase.from('settings').select('*').eq('collector_pin', pin).single();
+            
+            if (res.error || !res.data) {
+                alert('❌ الرمز غير صحيح. يرجى التواصل مع صاحب المولدة.');
+                return;
+            }
+
+            isCollector = true;
+            currentUser = { id: res.data.user_id };
+            await showApp();
+            
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('backBtn').classList.add('hidden');
+            openScreen('owner-invoices');
+        }
+
+        async function logout() {
+            await supabase.auth.signOut();
+            window.location.reload();
+        }
+
+        async function showApp() {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+            await loadData();
+            
+            if(isCollector) {
+                document.getElementById('mainTitle').innerText = '👤 لوحة الجابي';
+                document.getElementById('dashboard-view').classList.add('hidden');
+                openScreen('owner-invoices');
+            }
+        }
+
+        async function loadData() {
+            if(!currentUser) return;
+            
+            var resSet = await supabase.from('settings').select('*').eq('user_id', currentUser.id).maybeSingle();
+            if (resSet.data) {
+                DB.settings = resSet.data;
+                if (DB.settings.is_active === false) {
+                    alert('⛔ عذراً، حساب صاحب المولدة موقوف من قبل إدارة المنصة.');
+                    await logout();
+                    return;
+                }
+            }
+
+            var resSubs = await supabase.from('subscribers').select('*').eq('user_id', currentUser.id);
+            var resPays = await supabase.from('payments').select('*').eq('user_id', currentUser.id);
+            var resExp = await supabase.from('expenses').select('*').eq('user_id', currentUser.id);
+            var resComp = await supabase.from('complaints').select('*').eq('user_id', currentUser.id);
+            var resInv = await supabase.from('invoices').select('*').eq('user_id', currentUser.id);
+            
+            if (resSubs.data) DB.subs = resSubs.data;
+            if (resPays.data) DB.payments = resPays.data;
+            if (resExp.data) DB.expenses = resExp.data;
+            if (resComp.data) DB.complaints = resComp.data;
+            if (resInv.data) DB.invoices = resInv.data;
+        }
+
+        function openScreen(screenName) {
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('backBtn').classList.remove('hidden');
+            document.getElementById('mainTitle').innerText = 'العودة للرئيسية';
+            var innerView = document.getElementById('inner-view');
+            innerView.classList.remove('hidden');
+            innerView.innerHTML = '<div class="inner-screen"><p style="text-align:center;">جاري التحميل...</p></div>';
+
+            if (screenName === 'owner-home') renderOwnerHome();
+            else if (screenName === 'owner-subs') renderSubsScreen();
+            else if (screenName === 'owner-invoices') renderInvoicesScreen();
+            else if (screenName === 'owner-generator') renderGeneratorScreen();
+            else if (screenName === 'owner-fuel') renderFuelScreen();
+            else if (screenName === 'owner-reports') renderReportsScreen();
+            else if (screenName === 'owner-messages') renderMessagesScreen();
+            else if (screenName === 'owner-settings') renderSettingsScreen();
+            else if (screenName === 'admin-home') renderAdminHome();
+            else if (screenName === 'citizen-invoice') renderCitizenInvoice();
+        }
+
+        function goBack() {
+            if(isCollector) return;
+            document.getElementById('inner-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            document.getElementById('backBtn').classList.add('hidden');
+            document.getElementById('mainTitle').innerText = '🔌 منصة إدارة المولدات';
+        }
+
+        async function renderOwnerHome() {
+            await loadData();
+            var total = 0;
+            for(var i=0; i<DB.payments.length; i++){ total += Number(DB.payments[i].amount); }
+            var isOn = DB.settings.status;
+            var btnColor = isOn ? '#ef4444' : '#10b981';
+            var btnText = isOn ? 'إيقاف المولد 🔴' : 'تشغيل المولد ⚡';
+            
+            var html = '<div class="inner-screen"><h2>📊 لوحة التحكم</h2>';
+            html += '<div class="stat-box" style="background:#0f172a;"><h4>الشهر الحالي للفوترة</h4><p style="color:#f59e0b;">' + (DB.settings.current_month || 'الشهر الحالي') + '</p></div>';
+            html += '<div class="stat-box"><h4>حالة المولد</h4><p style="color:' + (isOn ? '#10b981' : '#ef4444') + ';">' + (isOn ? 'يعمل ⚡' : 'مطفي 🔴') + '</p>';
+            html += '<button class="status-btn" style="background:' + btnColor + ';" onclick="toggleGenerator()">' + btnText + '</button></div>';
+            html += '<div style="display:flex; gap:10px;">';
+            html += '<div class="stat-box" style="flex:1;"><h4>المشتركين</h4><p>' + DB.subs.length + '</p></div>';
+            html += '<div class="stat-box" style="flex:1;"><h4>الإيرادات</h4><p style="color:#10b981;">' + total.toLocaleString() + '</p></div>';
+            html += '</div></div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function toggleGenerator() {
+            var newStatus = !DB.settings.status;
+            await supabase.from('settings').update({ status: newStatus }).eq('id', DB.settings.id);
+            DB.settings.status = newStatus;
+            renderOwnerHome();
+        }
+
+        async function renderSubsScreen() {
+            await loadData(); 
+            var html = '<div class="inner-screen"><h2>👥 المشتركين</h2>';
+            
+            html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px;">';
+            html += '<div class="input-group"><input type="text" id="inpSubNum" class="input-field" placeholder="رقم الاشتراك (مثال: 1001)"></div>';
+            html += '<div class="input-group"><input type="text" id="inpName" class="input-field" placeholder="اسم المشترك"></div>';
+            html += '<div class="input-group"><input type="number" id="inpAmps" class="input-field" value="5" placeholder="الأمبير"></div>';
+            html += '<div class="input-group"><input type="text" id="inpPhone" class="input-field" placeholder="رقم الهاتف (07XXXXXXXXX)"></div>';
+            html += '<div class="input-group"><input type="text" id="inpAddress" class="input-field" placeholder="العنوان (المنطقة، الزقاق...)"></div>';
+            html += '<div class="input-group"><select id="inpStatus" class="input-field">';
+            html += '<option value="active">نشط</option><option value="suspended">موقوف</option>';
+            html += '</select></div>';
+            html += '<button class="btn-save" onclick="addNewSub()">➕ إضافة مشترك</button>';
+            html += '</div>';
+            
+            html += '<div class="input-group"><input type="text" id="searchBar" class="input-field" placeholder="🔍 بحث عن مشترك بالاسم أو رقم الاشتراك..." oninput="filterSubs()"></div>';
+
+            if (DB.subs.length === 0) html += '<p style="text-align:center; color:#64748b;">لا يوجد مشتركين حالياً.</p>';
+
+            html += '<div id="subs-list-container">';
+            for (var i = 0; i < DB.subs.length; i++) {
+                var s = DB.subs[i];
+                var statusColor = s.status === 'suspended' ? '#ef4444' : '#10b981';
+                var statusText = s.status === 'suspended' ? 'موقوف' : 'نشط';
+                
+                html += '<div class="list-item sub-row" data-name="' + s.name + '" data-num="' + (s.sub_number || '') + '">';
+                html += '<div>';
+                html += '<b>' + (s.sub_number ? '#' + s.sub_number + ' - ' : '') + s.name + '</b> <span style="color:#94a3b8; font-size:12px;">(' + s.amps + ' أمبير)</span><br>';
+                html += '<span style="color:#94a3b8; font-size:12px;">📞 ' + (s.phone || 'لا يوجد') + ' | 📍 ' + (s.address || 'لا يوجد') + '</span><br>';
+                html += '<span style="color:' + statusColor + '; font-size:12px; font-weight:bold;">الحالة: ' + statusText + '</span>';
+                html += '</div>';
+                html += '<div style="display:flex; gap:5px; flex-wrap:wrap;">';
+                html += '<button class="btn-warning" onclick="openEditSub(&quot;' + s.id + '&quot;, &quot;' + (s.sub_number || '') + '&quot;, &quot;' + s.name + '&quot;, ' + s.amps + ', &quot;' + (s.phone || '') + '&quot;, &quot;' + (s.address || '') + '&quot;, &quot;' + (s.status || 'active') + '&quot;)">تعديل ✏️</button>';
+                html += '<button class="btn-blue" onclick="showQRCode(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">QR</button>';
+                html += '<button class="btn-danger" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف</button>';
+                html += '</div></div>';
+            }
+            html += '</div></div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        function filterSubs() {
+            var query = document.getElementById('searchBar').value.toLowerCase();
+            var rows = document.querySelectorAll('.sub-row');
+            for (var i = 0; i < rows.length; i++) {
+                var name = rows[i].getAttribute('data-name').toLowerCase();
+                var num = rows[i].getAttribute('data-num').toLowerCase();
+                if (name.includes(query) || num.includes(query)) rows[i].style.display = 'flex';
+                else rows[i].style.display = 'none';
+            }
+        }
+
+        async function addNewSub() {
+            var subNum = document.getElementById('inpSubNum').value;
+            var name = document.getElementById('inpName').value;
+            var amps = document.getElementById('inpAmps').value;
+            var phone = document.getElementById('inpPhone').value;
+            var address = document.getElementById('inpAddress').value;
+            var status = document.getElementById('inpStatus').value;
+
+            if (!name || !amps) return alert('أدخل الاسم والأمبير على الأقل');
+            
+            var res = await supabase.from('subscribers').insert([{ 
+                sub_number: subNum,
+                name: name, 
+                amps: parseInt(amps), 
+                phone: phone || '-', 
+                address: address || '-',
+                status: status,
+                user_id: currentUser.id, 
+                prev_debt: 0 
+            }]);
+            
+            if (res.error) alert('فشل الحفظ: ' + res.error.message);
+            else { alert('✅ تم الإضافة بنجاح!'); renderSubsScreen(); }
+        }
+
+        function openEditSub(id, subNum, name, amps, phone, address, status) {
+            document.getElementById('editSubId').value = id;
+            document.getElementById('editSubNum').value = subNum;
+            document.getElementById('editSubName').value = name;
+            document.getElementById('editSubAmps').value = amps;
+            document.getElementById('editSubPhone').value = phone;
+            document.getElementById('editSubAddress').value = address;
+            document.getElementById('editSubStatus').value = status;
+            document.getElementById('editSubModal').classList.remove('hidden');
+        }
+
+        async function saveEditedSub() {
+            var id = document.getElementById('editSubId').value;
+            var subNum = document.getElementById('editSubNum').value;
+            var name = document.getElementById('editSubName').value;
+            var amps = document.getElementById('editSubAmps').value;
+            var phone = document.getElementById('editSubPhone').value;
+            var address = document.getElementById('editSubAddress').value;
+            var status = document.getElementById('editSubStatus').value;
+            
+            if (!name || !amps) return alert('أدخل البيانات كاملة');
+            
+            var res = await supabase.from('subscribers').update({ 
+                sub_number: subNum,
+                name: name, 
+                amps: parseInt(amps),
+                phone: phone,
+                address: address,
+                status: status
+            }).eq('id', id);
+            
+            if (res.error) alert('فشل التعديل: ' + res.error.message);
+            else { 
+                alert('✅ تم التعديل بنجاح!'); 
+                document.getElementById('editSubModal').classList.add('hidden');
+                renderSubsScreen(); 
+            }
+        }
+
+        async function deleteSub(id) {
+            if (!confirm('تأكيد الحذف؟')) return;
+            await supabase.from('subscribers').delete().eq('id', id);
+            renderSubsScreen();
+        }
+
+        function showQRCode(id, name) {
+            var baseUrl = window.location.origin + window.location.pathname;
+            var citizenUrl = baseUrl + "?citizen=" + id;
+            var qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(citizenUrl);
+            document.getElementById('qrImageContainer').innerHTML = '<img src="' + qrApiUrl + '" alt="QR Code">';
+            var message = "مرحباً " + name + "، هذا رابط فاتورتك:\n" + citizenUrl;
+            document.getElementById('waLink').href = "https://wa.me/?text=" + encodeURIComponent(message);
+            document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        async function renderInvoicesScreen() {
+            await loadData();
+            var innerView = document.getElementById('inner-view');
+            
+            var currentMonth = DB.settings.current_month || 'الشهر الحالي';
+            var currentMonthInvoices = DB.invoices.filter(function(inv) { return inv.month === currentMonth; });
+
+            var totalInvoices = currentMonthInvoices.length;
+            var paidInvoices = 0, unpaidInvoices = 0, overdueInvoices = 0;
+            var totalCollected = 0, totalOutstanding = 0;
+            var now = new Date();
+
+            for (var i = 0; i < currentMonthInvoices.length; i++) {
+                var inv = currentMonthInvoices[i];
+                if (inv.status === 'paid') {
+                    paidInvoices++;
+                    totalCollected += Number(inv.amount);
+                } else {
+                    if (inv.due_date && new Date(inv.due_date) < now) overdueInvoices++;
+                    else unpaidInvoices++;
+                    totalOutstanding += Number(inv.amount);
+                }
+            }
+
+            var html = '<div class="inner-screen"><h2>🧾 إدارة الفواتير</h2>';
+
+            if (totalInvoices === 0) {
+                html += '<div class="stat-box" style="background:#1e293b; border:1px dashed #f59e0b;">';
+                html += '<h4>لا توجد فواتير لهذا الشهر (' + currentMonth + ')</h4>';
+                html += '<button class="btn-save" style="background:#f59e0b; margin-top:10px;" onclick="generateInvoices()">⚡ توليد فواتير الشهر الآن</button>';
+                html += '</div>';
+            } else {
+                html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:20px;">';
+                html += '<div class="stat-box" style="margin:0;"><h4>إجمالي الفواتير</h4><p>' + totalInvoices + '</p></div>';
+                html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #10b981;"><h4>مدفوعة</h4><p>' + paidInvoices + '</p></div>';
+                html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #f59e0b;"><h4>معلقة</h4><p>' + unpaidInvoices + '</p></div>';
+                html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #ef4444;"><h4>متأخرة</h4><p>' + overdueInvoices + '</p></div>';
+                html += '<div class="stat-box" style="margin:0; background:#064e3b;"><h4 style="color:#6ee7b7;">المستلمة</h4><p style="color:#34d399;">' + totalCollected.toLocaleString() + '</p></div>';
+                html += '<div class="stat-box" style="margin:0; background:#7f1d1d;"><h4 style="color:#fca5a5;">المستحقة</h4><p style="color:#f87171;">' + totalOutstanding.toLocaleString() + '</p></div>';
+                html += '</div>';
+
+                html += '<div style="background:#0f172a; border-radius:10px; overflow-x:auto;">';
+                html += '<table style="width:100%; border-collapse:collapse; text-align:right; font-size:13px;">';
+                html += '<tr style="background:#1e293b; color:#94a3b8;">';
+                html += '<th style="padding:10px; border-bottom:1px solid #334155;">رقم الفاتورة</th>';
+                html += '<th style="padding:10px; border-bottom:1px solid #334155;">المشترك</th>';
+                html += '<th style="padding:10px; border-bottom:1px solid #334155;">الأمبير</th>';
+                html += '<th style="padding:10px; border-bottom:1px solid #334155;">المبلغ</th>';
+                html += '<th style="padding:10px; border-bottom:1px solid #334155;">الحالة</th>';
+                html += '<th style="padding:10px; border-bottom:1px solid #334155;">الاستحقاق</th>';
+                html += '<th style="padding:10px; border-bottom:1px solid #334155;">إجراء</th>';
+                html += '</tr>';
+
+                for (var j = 0; j < currentMonthInvoices.length; j++) {
+                    var inv = currentMonthInvoices[j];
+                    var sub = DB.subs.find(function(s) { return s.id === inv.sub_id; });
+                    var subName = sub ? sub.name : 'محذوف';
+                    
+                    var statusColor = inv.status === 'paid' ? '#10b981' : (inv.status === 'overdue' ? '#ef4444' : '#f59e0b');
+                    var statusText = inv.status === 'paid' ? 'مدفوعة' : (inv.status === 'overdue' ? 'متأخرة' : 'معلقة');
+                    var dueDateStr = inv.due_date ? new Date(inv.due_date).toLocaleDateString('ar-IQ') : '-';
+
+                    html += '<tr style="border-bottom:1px solid #1e293b;">';
+                    html += '<td style="padding:10px;">' + (inv.invoice_number || '-') + '</td>';
+                    html += '<td style="padding:10px;">' + subName + '</td>';
+                    html += '<td style="padding:10px;">' + inv.amps + '</td>';
+                    html += '<td style="padding:10px;">' + Number(inv.amount).toLocaleString() + '</td>';
+                    html += '<td style="padding:10px;"><span style="color:' + statusColor + '; font-weight:bold;">' + statusText + '</span></td>';
+                    html += '<td style="padding:10px;">' + dueDateStr + '</td>';
+                    html += '<td style="padding:10px;">';
+                    
+                    if (inv.status !== 'paid') {
+                        html += '<button class="btn-save" style="padding:5px 10px; font-size:12px; margin:0;" onclick="payInvoice(&quot;' + inv.id + '&quot;, ' + inv.amount + ', &quot;' + inv.sub_id + '&quot;)">استلم</button>';
+                    } else {
+                        html += '<span style="color:#10b981;">✅</span>';
+                    }
+                    html += '</td></tr>';
+                }
+                html += '</table></div>';
+            }
+            html += '</div>';
+            innerView.innerHTML = html;
+        }
+
+        async function generateInvoices() {
+            if (!confirm('هل أنت متأكد من توليد فواتير لهذا الشهر لجميع المشتركين النشطين؟')) return;
+            
+            var currentMonth = DB.settings.current_month || 'الشهر الحالي';
+            var price = DB.settings.price_per_amp;
+            var newInvoices = [];
+
+            for (var i = 0; i < DB.subs.length; i++) {
+                var s = DB.subs[i];
+                if (s.status === 'suspended') continue;
+
+                var amount = s.amps * price;
+                var dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 10);
+
+                newInvoices.push({
+                    user_id: currentUser.id,
+                    sub_id: s.id,
+                    invoice_number: 'INV-' + Math.floor(1000 + Math.random() * 9000),
+                    month: currentMonth,
+                    amps: s.amps,
+                    amount: amount,
+                    status: 'unpaid',
+                    due_date: dueDate.toISOString()
+                });
+            }
+
+            if (newInvoices.length > 0) {
+                var res = await supabase.from('invoices').insert(newInvoices);
+                if (res.error) alert('خطأ: ' + res.error.message);
+                else { alert('✅ تم توليد الفواتير بنجاح!'); await loadData(); renderInvoicesScreen(); }
+            } else {
+                alert('لا يوجد مشتركين نشطين لتوليد فواتير لهم.');
+            }
+        }
+
+        async function payInvoice(invoiceId, amount, subId) {
+            if (!confirm('هل أنت متأكد من استلام مبلغ ' + Number(amount).toLocaleString() + ' د.ع؟')) return;
+
+            var res = await supabase.from('invoices').update({
+                status: 'paid',
+                payment_date: new Date().toISOString(),
+                payment_method: 'cash'
+            }).eq('id', invoiceId);
+
+            if (res.error) {
+                alert('خطأ: ' + res.error.message);
+                return;
+            }
+
+            var currentMonth = DB.settings.current_month || 'الشهر الحالي';
+            await supabase.from('payments').insert([{ 
+                sub_id: subId, 
+                amount: amount, 
+                method: 'cash', 
+                status: 'paid', 
+                user_id: currentUser.id,
+                billing_month: currentMonth 
+            }]);
+
+            alert('✅ تم تسجيل الدفع بنجاح!');
+            await loadData();
+            renderInvoicesScreen();
+        }
+
+        async function renderGeneratorScreen() {
+            var html = '<div class="inner-screen"><h2>⚙️ إدارة المولد</h2>';
+            html += '<div class="stat-box"><h4>القدرة (KVA)</h4><p>500 KVA</p></div>';
+            html += '<div class="stat-box"><h4>ساعات التشغيل الكلية</h4><p>2150 ساعة</p></div>';
+            html += '<div class="stat-box"><h4>مستوى الزيت</h4><p style="color:#10b981;">ممتاز (85%)</p></div></div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function renderFuelScreen() {
+            await loadData();
+            var html = '<div class="inner-screen"><h2>⛽ إدارة الوقود</h2>';
+            html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px;">';
+            html += '<div class="input-group"><input type="number" id="fuelCost" class="input-field" placeholder="تكلفة الوقود (د.ع)"></div>';
+            html += '<button class="btn-save" style="background:#eab308;" onclick="addFuel()">➕ إضافة تعبئة</button>';
+            html += '</div>';
+            for(var i=0; i<DB.expenses.length; i++) {
+                if(DB.expenses[i].type === 'وقود') html += '<div class="list-item"><div><b>تعبئة وقود</b></div><div style="color:#ef4444;">' + Number(DB.expenses[i].amount).toLocaleString() + ' د.ع</div></div>';
+            }
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function addFuel() {
+            var cost = document.getElementById('fuelCost').value;
+            if(!cost) return alert('أدخل التكلفة');
+            await supabase.from('expenses').insert([{ type: 'وقود', amount: cost, note: 'تعبئة', user_id: currentUser.id }]);
+            renderFuelScreen();
+        }
+
+        async function renderReportsScreen() {
+            await loadData();
+            
+            var now = new Date();
+            var start = new Date();
+            var end = new Date();
+            
+            if (reportPeriod === 'today') {
+                start.setHours(0,0,0,0);
+            } else if (reportPeriod === 'week') {
+                start.setDate(now.getDate() - 7);
+            } else if (reportPeriod === 'month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else if (reportPeriod === 'year') {
+                start = new Date(now.getFullYear(), 0, 1);
+            } else if (reportPeriod === 'custom') {
+                if (!customFrom || !customTo) {
+                    start = new Date(now.getFullYear(), now.getMonth(), 1);
+                } else {
+                    start = new Date(customFrom);
+                    end = new Date(customTo);
+                    end.setHours(23, 59, 59, 999);
+                }
+            }
+
+            var filteredPayments = DB.payments.filter(function(p) {
+                var d = new Date(p.date);
+                return d >= start && d <= end;
+            });
+            
+            var filteredExpenses = DB.expenses.filter(function(e) {
+                var d = new Date(e.date);
+                return d >= start && d <= end;
+            });
+
+            var totalIncome = 0;
+            var totalExpense = 0;
+            
+            for(var i=0; i<filteredPayments.length; i++) totalIncome += Number(filteredPayments[i].amount);
+            for(var j=0; j<filteredExpenses.length; j++) totalExpense += Number(filteredExpenses[j].amount);
+            
+            var profit = totalIncome - totalExpense;
+            var activeSubs = DB.subs.filter(function(s) { return s.status !== 'suspended'; }).length;
+
+            var html = '<div class="inner-screen"><h2>📈 التقارير والإحصائيات</h2>';
+            
+            html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">';
+            html += '<label style="color:#94a3b8; font-size:14px; width:100%;">📅 اختيار الفترة:</label>';
+            
+            html += '<select class="input-field" style="flex:1; min-width:150px; margin:0;" onchange="reportPeriod = this.value; renderReportsScreen();">';
+            html += '<option value="today"' + (reportPeriod==='today'?' selected':'') + '>اليوم</option>';
+            html += '<option value="week"' + (reportPeriod==='week'?' selected':'') + '>آخر 7 أيام</option>';
+            html += '<option value="month"' + (reportPeriod==='month'?' selected':'') + '>هذا الشهر</option>';
+            html += '<option value="year"' + (reportPeriod==='year'?' selected':'') + '>هذه السنة</option>';
+            html += '<option value="custom"' + (reportPeriod==='custom'?' selected':'') + '>فترة مخصصة</option>';
+            html += '</select>';
+            
+            if (reportPeriod === 'custom') {
+                html += '<input type="date" class="input-field" style="flex:1; min-width:120px; margin:0;" value="' + customFrom + '" onchange="customFrom = this.value; renderReportsScreen();">';
+                html += '<span style="color:#94a3b8;">إلى</span>';
+                html += '<input type="date" class="input-field" style="flex:1; min-width:120px; margin:0;" value="' + customTo + '" onchange="customTo = this.value; renderReportsScreen();">';
+            }
+            html += '</div>';
+
+            html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:20px;">';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #10b981;">';
+            html += '<h4>إجمالي الإيرادات 💰</h4><p style="color:#10b981;">' + totalIncome.toLocaleString() + '</p>';
+            html += '</div>';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #ef4444;">';
+            html += '<h4>إجمالي المصروفات 💸</h4><p style="color:#ef4444;">' + totalExpense.toLocaleString() + '</p>';
+            html += '</div>';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #f59e0b;">';
+            html += '<h4>صافي الربح 📈</h4><p style="color:' + (profit >= 0 ? '#10b981' : '#ef4444') + ';">' + profit.toLocaleString() + '</p>';
+            html += '</div>';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #3b82f6;">';
+            html += '<h4>المشتركين النشطين 👥</h4><p style="color:#3b82f6;">' + activeSubs + '</p>';
+            html += '</div>';
+
+            html += '</div>';
+            html += '</div>';
+
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function renderMessagesScreen() {
+            await loadData();
+            var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">💬 الرسائل والشكاوى</h2>';
+            
+            html += '<div class="stat-box" style="border-top:2px solid #25D366;">';
+            html += '<h4 style="color:#25D366;">📢 إشعار جماعي للمتأخرين</h4>';
+            html += '<p style="font-size:13px; color:#94a3b8; margin-bottom:10px;">رسالة واتساب لكل مشترك عليه فواتير غير مدفوعة.</p>';
+            html += '<button class="btn-green" style="width:100%;" onclick="broadcastToDebtors()">تجهيز الرسائل</button>';
+            html += '<div id="broadcastList" style="margin-top:10px; max-height:200px; overflow-y:auto;"></div>';
+            html += '</div>';
+
+            html += '<h3 style="margin-top:20px; margin-bottom:10px; color:#94a3b8;">📥 الشكاوى الواردة</h3>';
+            if(DB.complaints.length === 0) {
+                html += '<p style="text-align:center; color:#64748b;">لا يوجد شكاوى واردة.</p>';
+            } else {
+                for(var i=0; i<DB.complaints.length; i++) {
+                    var c = DB.complaints[i];
+                    var d = new Date(c.date).toLocaleDateString('ar-IQ');
+                    html += '<div class="list-item" style="flex-direction:column; align-items:stretch; border-right:4px solid #ef4444;">';
+                    html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b style="color:#3b82f6;">' + (c.citizen_name || 'مواطن') + '</b><span style="font-size:12px; color:#94a3b8;">' + d + '</span></div>';
+                    html += '<p style="font-size:14px; color:#e2e8f0;">' + c.text + '</p>';
+                    html += '<button class="btn-save" style="background:#10b981; margin-top:10px; padding:5px; font-size:12px;" onclick="resolveComplaint(&quot;' + c.id + '&quot;)">✅ تم الحل</button>';
+                    html += '</div>';
+                }
+            }
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        function broadcastToDebtors() {
+            var listDiv = document.getElementById('broadcastList');
+            listDiv.innerHTML = '';
+            var currentMonth = DB.settings.current_month || 'الشهر الحالي';
+            var count = 0;
+
+            for(var i=0; i<DB.invoices.length; i++) {
+                var inv = DB.invoices[i];
+                if(inv.month === currentMonth && inv.status !== 'paid') {
+                    var sub = DB.subs.find(function(s) { return s.id === inv.sub_id; });
+                    if(!sub) continue;
+                    
+                    count++;
+                    var msg = "مرحباً " + sub.name + "،\nنذكركم بضرورة تسديد فاتورة شهر " + currentMonth + " بمبلغ " + Number(inv.amount).toLocaleString() + " د.ع لمولدة " + (DB.settings.generator_name || 'النور') + ".\nشكراً لتعاونكم.";
+                    var waUrl = "https://wa.me/?text=" + encodeURIComponent(msg);
+                    listDiv.innerHTML += '<div class="list-item" style="padding:10px; margin-top:5px;"><span>' + sub.name + ' (مطلوب ' + inv.amount.toLocaleString() + ')</span><a href="' + waUrl + '" target="_blank" class="btn-green" style="padding:5px 10px; font-size:12px;">إرسال</a></div>';
+                }
+            }
+            if(count === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; color:#10b981; margin-top:10px;">كل المشتركين مسددين! 🎉</p>';
+            }
+        }
+
+        async function resolveComplaint(id) {
+            await supabase.from('complaints').delete().eq('id', id);
+            renderMessagesScreen();
+        }
+
+        async function renderSettingsScreen() {
+            var html = '<div class="inner-screen"><h2>⚙️ الإعدادات</h2>';
+            
+            html += '<div class="stat-box" style="background:#0f172a; border:1px solid #f59e0b; margin-bottom:20px;">';
+            html += '<h4>الشهر الحالي للفوترة</h4>';
+            html += '<p style="color:#f59e0b;">' + (DB.settings.current_month || 'الشهر الحالي') + '</p>';
+            html += '<button class="btn-warning" style="width:100%; margin-top:10px;" onclick="startNewMonth()">🔄 بدء شهر جديد (تصفير الفواتير)</button>';
+            html += '</div>';
+
+            html += '<div class="input-group"><label>اسم المولدة:</label><input type="text" id="inpGenName" class="input-field" value="' + (DB.settings.generator_name || '') + '"></div>';
+            html += '<div class="input-group"><label>رقم هاتف صاحب المولدة:</label><input type="text" id="inpOwnerPhone" class="input-field" value="' + (DB.settings.owner_phone || '') + '"></div>';
+            html += '<div class="input-group"><label>أوقات العمل:</label><input type="text" id="inpWorkHours" class="input-field" value="' + (DB.settings.work_hours || '') + '"></div>';
+            html += '<div class="input-group"><label>سعر الأمبير:</label><input type="number" id="inpPrice" class="input-field" value="' + DB.settings.price_per_amp + '"></div>';
+            html += '<div class="input-group"><label>رمز دخول الجابي (PIN):</label><input type="text" id="inpPin" class="input-field" value="' + (DB.settings.collector_pin || '1234') + '"></div>';
+            html += '<button class="btn-save" onclick="saveSettings()">حفظ الإعدادات</button></div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function saveSettings() {
+            var newName = document.getElementById('inpGenName').value;
+            var newPhone = document.getElementById('inpOwnerPhone').value;
+            var newHours = document.getElementById('inpWorkHours').value;
+            var newPrice = document.getElementById('inpPrice').value;
+            var newPin = document.getElementById('inpPin').value;
+            
+            await supabase.from('settings').update({ 
+                generator_name: newName,
+                owner_phone: newPhone,
+                work_hours: newHours,
+                price_per_amp: newPrice,
+                collector_pin: newPin
+            }).eq('id', DB.settings.id);
+            
+            DB.settings.generator_name = newName;
+            DB.settings.owner_phone = newPhone;
+            DB.settings.work_hours = newHours;
+            DB.settings.price_per_amp = newPrice;
+            DB.settings.collector_pin = newPin;
+            
+            alert('تم حفظ الإعدادات بنجاح');
+        }
+
+        async function startNewMonth() {
+            var newMonth = prompt("أدخل اسم الشهر الجديد (مثال: يونيو 2024):\nملاحظة: سيتم ترحيل الفواتير غير المدفوعة للشهر الجديد كديون سابقة.", "الشهر الجديد");
+            if (!newMonth) return;
+            
+            var oldMonth = DB.settings.current_month || 'الشهر الحالي';
+            
+            for (var i = 0; i < DB.subs.length; i++) {
+                var s = DB.subs[i];
+                if(s.status === 'suspended') continue;
+                
+                var unpaidAmount = 0;
+                for (var j = 0; j < DB.invoices.length; j++) {
+                    var inv = DB.invoices[j];
+                    if (inv.sub_id === s.id && inv.month === oldMonth && inv.status !== 'paid') {
+                        unpaidAmount += Number(inv.amount);
+                    }
+                }
+                
+                var newPrevDebt = Number(s.prev_debt || 0) + unpaidAmount;
+
+                if (unpaidAmount > 0) {
+                    await supabase.from('subscribers').update({ prev_debt: newPrevDebt }).eq('id', s.id);
+                }
+            }
+            
+            await supabase.from('settings').update({ current_month: newMonth }).eq('id', DB.settings.id);
+            DB.settings.current_month = newMonth;
+            
+            alert('✅ تم بدء شهر جديد: ' + newMonth + '\nتم ترحيل الديون غير المسددة بنجاح.');
+            await loadData();
+            renderSettingsScreen();
+        }
+
+        async function renderAdminHome() {
+            var innerView = document.getElementById('inner-view');
+            
+            var resSettings = await supabase.from('settings').select('*');
+            var resSubs = await supabase.from('subscribers').select('*');
+            var resPays = await supabase.from('payments').select('*');
+            var resComp = await supabase.from('complaints').select('*');
+
+            var allGens = resSettings.data || [];
+            var allSubs = resSubs.data || [];
+            var allPays = resPays.data || [];
+            var allComps = resComp.data || [];
+
+            var totalGens = allGens.length;
+            var totalSubs = allSubs.length;
+            var activeGens = 0;
+            var inactiveGens = 0;
+            for(var i=0; i<allGens.length; i++) {
+                if(allGens[i].is_active !== false) activeGens++;
+                else inactiveGens++;
+            }
+            
+            var totalRevenue = 0;
+            for(var j=0; j<allPays.length; j++) totalRevenue += Number(allPays[j].amount);
+
+            var openComps = 0;
+            for(var k=0; k<allComps.length; k++) if(allComps[k].status === 'open') openComps++;
+
+            var html = '<div class="inner-screen" style="border-top-color:#eab308; max-width: 1000px;"><h2 style="color:#eab308;">👑 إدارة المنصة</h2>';
+
+            html += '<div class="admin-sections">';
+            html += '<button class="active">لوحة التحكم</button>';
+            html += '<button onclick="alert(\'قائمة أصحاب المولدات\')">إدارة أصحاب المولدات</button>';
+            html += '<button onclick="alert(\'قائمة المشتركين\')">إدارة المشتركين</button>';
+            html += '<button onclick="alert(\'الطلبات الجديدة\')">الطلبات الجديدة</button>';
+            html += '<button onclick="alert(\'التقارير\')">التقارير والإحصائيات</button>';
+            html += '<button onclick="alert(\'المالية\')">الإدارة المالية</button>';
+            html += '<button onclick="alert(\'الإشعارات\')">الإشعارات</button>';
+            html += '<button onclick="alert(\'الإعدادات\')">الإعدادات</button>';
+            html += '</div>';
+
+            html += '<div class="admin-actions">';
+            html += '<button style="background:#3b82f6;" onclick="alert(\'قريباً\')">➕ إضافة صاحب مولد</button>';
+            html += '<button style="background:#10b981;" onclick="alert(\'قريباً\')">➕ إضافة مولد جديد</button>';
+            html += '<button style="background:#f59e0b;" onclick="alert(\'قريباً\')">📢 إرسال إشعار جماعي</button>';
+            html += '</div>';
+
+            html += '<div class="admin-grid">';
+            html += '<div class="admin-card"><h4>إجمالي المولدات</h4><p>' + totalGens + '</p></div>';
+            html += '<div class="admin-card"><h4>إجمالي المشتركين</h4><p>' + totalSubs + '</p></div>';
+            html += '<div class="admin-card" style="border-top-color:#10b981;"><h4>المولدات العاملة</h4><p style="color:#10b981;">' + activeGens + '</p></div>';
+            html += '<div class="admin-card" style="border-top-color:#ef4444;"><h4>المولدات المتوقفة</h4><p style="color:#ef4444;">' + inactiveGens + '</p></div>';
+            html += '<div class="admin-card"><h4>الإيرادات الشهرية</h4><p>' + totalRevenue.toLocaleString() + '</p></div>';
+            html += '<div class="admin-card" style="border-top-color:#ef4444;"><h4>الشكاوى المفتوحة</h4><p style="color:#ef4444;">' + openComps + '</p></div>';
+            html += '</div>';
+
+            html += '<div style="background:#0f172a; padding:15px; border-radius:10px; margin-bottom:20px;">';
+            html += '<h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">نسبة النمو (هذا الشهر)</h4>';
+            html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;"><span>المشتركين</span><span style="color:#10b981;">+15% ↗</span></div>';
+            html += '<div style="display:flex; justify-content:space-between; font-size:13px;"><span>الإيرادات</span><span style="color:#10b981;">+22% ↗</span></div>';
+            html += '</div>';
+
+            html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:20px;">';
+            html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">خريطة المولدات</h4>';
+            html += '<div class="map-placeholder">🗺️ (خريطة توضيحية لمواقع المولدات)</div></div>';
+            html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">إحصائيات الإيرادات (آخر 6 أشهر)</h4>';
+            html += '<div class="chart-container">';
+            html += '<div class="chart-bar" style="height:30%;"><span>يناير</span></div>';
+            html += '<div class="chart-bar" style="height:50%;"><span>فبراير</span></div>';
+            html += '<div class="chart-bar" style="height:40%;"><span>مارس</span></div>';
+            html += '<div class="chart-bar" style="height:70%;"><span>أبريل</span></div>';
+            html += '<div class="chart-bar" style="height:85%;"><span>مايو</span></div>';
+            html += '<div class="chart-bar" style="height:100%; background:#10b981;"><span>يونيو</span></div>';
+            html += '</div></div>';
+            html += '</div>';
+
+            html += '<div style="display:flex; flex-wrap:wrap; gap:15px;">';
+            html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">آخر عمليات الدفع</h4>';
+            if(allPays.length === 0) html += '<p style="color:#64748b; font-size:13px;">لا يوجد دفعات.</p>';
+            for(var p=Math.max(0, allPays.length-3); p<allPays.length; p++) {
+                html += '<div class="list-item" style="padding:10px;"><span>دفعة جديدة</span><b style="color:#10b981;">' + Number(allPays[p].amount).toLocaleString() + ' د.ع</b></div>';
+            }
+            html += '</div>';
+
+            html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">آخر الشكاوى</h4>';
+            if(allComps.length === 0) html += '<div class="list-item" style="padding:10px;"><span style="color:#64748b;">لا توجد شكاوى حديثة</span><span style="color:#10b981;">-</span></div>';
+            else {
+                for(var c=Math.max(0, allComps.length-3); c<allComps.length; c++) {
+                    html += '<div class="list-item" style="padding:10px;"><span>' + allComps[c].text + '</span><span style="color:' + (allComps[c].status === 'open' ? '#ef4444' : '#10b981') + ';">' + (allComps[c].status === 'open' ? 'مفتوحة' : 'مغلقة') + '</span></div>';
+                }
+            }
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+            innerView.innerHTML = html;
+        }
+
+        async function renderCitizenInvoice() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var citizenId = urlParams.get('citizen');
+
+            if (!citizenId) {
+                document.getElementById('inner-view').innerHTML = '<div class="inner-screen"><h2>🧾 واجهة المواطن</h2><p style="text-align:center;">ادخل من الرابط المرسل لك.</p></div>';
+                return;
+            }
+
+            var resSub = await supabase.from('subscribers').select('*').eq('id', citizenId).single();
+            if (resSub.error || !resSub.data) {
+                document.getElementById('inner-view').innerHTML = '<div class="inner-screen"><h2>خطأ</h2><p style="text-align:center;">لم يتم العثور على حسابك.</p></div>';
+                return;
+            }
+
+            var citizen = resSub.data;
+            var resSet = await supabase.from('settings').select('*').eq('user_id', citizen.user_id).single(); 
+            var resInv = await supabase.from('invoices').select('*').eq('sub_id', citizenId).neq('status', 'paid');
+            
+            var settings = resSet.data || { status: true, price_per_amp: 5000, owner_phone: '', work_hours: '', current_month: 'الشهر الحالي' };
+            var currentMonth = settings.current_month || 'الشهر الحالي';
+            
+            var currentMonthInvoices = resInv.data || [];
+            var currentMonthDue = 0;
+            for(var i=0; i<currentMonthInvoices.length; i++) {
+                if(currentMonthInvoices[i].month === currentMonth) currentMonthDue += Number(currentMonthInvoices[i].amount);
+            }
+
+            var prevDebt = Number(citizen.prev_debt || 0);
+            var finalDue = currentMonthDue + prevDebt;
+
+            var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">🧾 أهلاً، ' + citizen.name + '</h2>';
+            
+            html += '<div class="stat-box" style="background:#1e293b;">';
+            html += '<h4>اسم المولدة: <span style="color:#3b82f6;">' + (settings.generator_name || 'النور') + '</span></h4>';
+            html += '<p style="font-size:13px; color:#94a3b8; margin-top:5px;">أوقات العمل: ' + (settings.work_hours || 'غير محددة') + '</p>';
+            html += '<p style="font-size:13px; color:#94a3b8;">رقم المولدة: ' + (settings.owner_phone || 'غير متوفر') + '</p>';
+            html += '</div>';
+
+            html += '<div class="stat-box"><h4>حالة المولدة</h4><p style="color:' + (settings.status ? '#10b981' : '#ef4444') + ';">' + (settings.status ? 'شغالة الآن ⚡' : 'مطفية حالياً 🔴') + '</p></div>';
+            
+            html += '<div class="stat-box"><h4>فاتورة شهر (' + currentMonth + ')</h4><p style="font-size:14px; color:#94a3b8; margin-bottom:5px;">اشتراكك: ' + citizen.amps + ' أمبير</p>';
+            
+            if(citizen.status === 'suspended') {
+                html += '<p style="color:#ef4444; font-size:20px; font-weight:bold; margin-top:15px;">⛔ اشتراكك موقوف حالياً</p>';
+            } else {
+                if(prevDebt > 0) {
+                    html += '<p style="color:#ef4444; font-size:14px; margin-bottom:5px; font-weight:bold;">⚠️ لديك متأخرات سابقة: ' + prevDebt.toLocaleString() + ' د.ع</p>';
+                }
+
+                html += '<p style="color:#f59e0b; font-size:28px; font-weight:bold;">' + finalDue.toLocaleString() + ' د.ع</p>';
+                if(finalDue > 0) { 
+                    html += '<button class="btn-save" style="background:#3b82f6; margin-top:15px; font-size:18px;">💳 ادفع عبر سوبر كيو</button>'; 
+                } else { 
+                    html += '<p style="color:#10b981; font-weight:bold; font-size:20px; margin-top:15px;">✅ مسدد بالكامل</p>'; 
+                }
+            }
+            html += '</div>';
+
+            html += '<div class="stat-box" style="margin-top:20px; border-top:2px solid #ef4444;">';
+            html += '<h4 style="color:#ef4444;">تقديم شكوى</h4>';
+            html += '<textarea id="complaintText" class="input-field" rows="3" placeholder="اكتب شكواك هنا..."></textarea>';
+            html += '<button class="btn-save" style="background:#ef4444; margin-top:10px;" onclick="sendComplaint(&quot;' + citizen.id + '&quot;, &quot;' + citizen.user_id + '&quot;, &quot;' + citizen.name + '&quot;)">📢 إرسال الشكوى</button>';
+            html += '</div>';
+
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function sendComplaint(citizenId, userId, citizenName) {
+            var text = document.getElementById('complaintText').value;
+            if(!text) return alert('يرجى كتابة نص الشكوى أولاً.');
+            
+            var res = await supabase.from('complaints').insert([{ 
+                user_id: userId, 
+                citizen_name: citizenName, 
+                text: text, 
+                status: 'open' 
+            }]);
+            
+            if(res.error) alert('فشل إرسال الشكوى: ' + res.error.message);
+            else {
+                alert('✅ تم إرسال شكواك بنجاح، سيتم مراجعتها من قبل صاحب المولدة.');
+                document.getElementById('complaintText').value = '';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

@@ -3,97 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة إدارة المولدات</title>
+    <title>لوحة صاحب المولد</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body { background-color: #0b1120; color: #f8fafc; min-height: 100vh; padding: 20px; background-image: radial-gradient(circle at top right, #1e293b, #0b1120); }
+        body { background-color: #0b1120; color: #f8fafc; padding-bottom: 70px; }
+        
+        .header { background: #1e293b; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f59e0b; }
+        .header h1 { font-size: 20px; color: #f59e0b; }
+        .header button { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        .content { padding: 20px; max-width: 500px; margin: 0 auto; }
+        .card { background: #1e293b; border-radius: 15px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .card h3 { color: #94a3b8; font-size: 14px; margin-bottom: 10px; }
+        .card .value { font-size: 28px; font-weight: bold; color: #f59e0b; }
+
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #334155; }
+        .nav-btn { background: none; border: none; color: #94a3b8; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .nav-btn.active { color: #f59e0b; }
+        .nav-btn span { font-size: 22px; }
+
         .hidden { display: none !important; }
-
-        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: rgba(30, 41, 59, 0.8); border-radius: 15px; margin-bottom: 30px; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .top-bar h1 { font-size: 24px; }
-        .back-btn { background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
-
-        .dashboard-grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; align-items: flex-start; }
-        .panel { background: rgba(30, 41, 59, 0.6); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; width: 100%; max-width: 380px; border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 8px 32px 0 rgba(0,0,0,0.4); }
-        .panel.owner { border-top: 4px solid #f59e0b; }
-        .panel.admin { border-top: 4px solid #eab308; }
-        .panel.citizen { border-top: 4px solid #3b82f6; }
-        .panel-header h2 { font-size: 22px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
-        .panel.owner .panel-header h2 { color: #f59e0b; }
-        .panel.admin .panel-header h2 { color: #eab308; }
-        .panel.citizen .panel-header h2 { color: #3b82f6; }
-
-        .card-item { background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 12px 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
-        .card-item:hover { background: rgba(255, 255, 255, 0.1); }
-        .card-text h4 { font-size: 15px; margin-bottom: 4px; color: #e2e8f0; }
-        .card-text p { font-size: 12px; color: #94a3b8; }
-        .card-icon { font-size: 24px; margin-right: 15px; }
-
-        /* تصميم شاشة المشتركين الداخلية */
-        .inner-screen { background: rgba(30, 41, 59, 0.9); border-radius: 20px; padding: 20px; max-width: 600px; margin: 0 auto; border-top: 4px solid #f59e0b; }
-        .inner-screen h2 { color: #f59e0b; margin-bottom: 20px; }
+        
+        /* تنسيقات داخلية */
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 14px; }
         .input-field { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 16px; }
-        .btn-save { background: #10b981; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .sub-list-item { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
-        .btn-del { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        .btn-primary { background: #10b981; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; margin-bottom: 10px; }
+        .btn-danger { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
         
-        @media (max-width: 768px) { .dashboard-grid { flex-direction: column; align-items: center; } }
+        .list-item { background: #0f172a; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 5px; }
+        .status-green { background: #10b981; }
+        .status-red { background: #ef4444; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">
-        <h1>🔌 منصة إدارة المولدات</h1>
-        <!-- زر الرجوع (مخفي في البداية) -->
-        <button id="backBtn" class="back-btn hidden" onclick="goBack()">↩ رجوع</button>
+    <!-- الهيدر -->
+    <div class="header">
+        <h1>⚡ صاحب المولد</h1>
+        <button onclick="logout()">خروج</button>
     </div>
 
-    <!-- الشاشة الرئيسية (الداشبورد) -->
-    <div id="dashboard-view" class="dashboard-grid">
-        
-        <!-- 1. صاحب المولد -->
-        <div class="panel owner">
-            <div class="panel-header"><h2>صاحب المولد ⚡</h2></div>
-            
-            <div class="card-item" onclick="goTo('لوحة التحكم')">
-                <div class="card-text"><h4>لوحة التحكم الرئيسية</h4><p>إحصائيات اليوم</p></div>
-                <div class="card-icon">📊</div>
-            </div>
-            <div class="card-item" onclick="goTo('إدارة المشتركين')">
-                <div class="card-text"><h4>إدارة المشتركين</h4><p><span id="owner-subs-count">0</span> مشترك مسجل</p></div>
-                <div class="card-icon">👥</div>
-            </div>
-            <div class="card-item" onclick="goTo('التحصيل')">
-                <div class="card-text"><h4>التحصيل والمدفوعات</h4><p>تسجيل استلام الكاش</p></div>
-                <div class="card-icon">💵</div>
-            </div>
-        </div>
+    <!-- منطقة المحتوى (تتغير حسب الزر) -->
+    <div class="content" id="mainContent"></div>
 
-        <!-- 2. مالك المنصة -->
-        <div class="panel admin">
-            <div class="panel-header"><h2>مالك المنصة 👑</h2></div>
-            <div class="card-item" onclick="goTo('إحصائيات المنصة')">
-                <div class="card-text"><h4>لوحة التحكم الرئيسية</h4><p>المشتركين: <span id="admin-subs-count">0</span></p><p style="color:#eab308;">الإيرادات: <span id="admin-revenue-count">0 د.ع</span></p></div>
-                <div class="card-icon">📈</div>
-            </div>
-        </div>
-
-        <!-- 3. المواطن -->
-        <div class="panel citizen">
-            <div class="panel-header"><h2>المواطن 👤</h2></div>
-            <div class="card-item" onclick="goTo('فاتورتي')">
-                <div class="card-text"><h4>الفواتير والمدفوعات</h4><p>عرض الفاتورة الحالية</p></div>
-                <div class="card-icon">🧾</div>
-            </div>
-        </div>
-
+    <!-- الشريط السفلي -->
+    <div class="bottom-nav">
+        <button class="nav-btn active" id="nav-home" onclick="switchTab('home')"><span>🏠</span>الرئيسية</button>
+        <button class="nav-btn" id="nav-subs" onclick="switchTab('subs')"><span>👥</span>المشتركين</button>
+        <button class="nav-btn" id="nav-collect" onclick="switchTab('collect')"><span>💵</span>التحصيل</button>
+        <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')"><span>⚙️</span>الإعدادات</button>
     </div>
-
-    <!-- الشاشة الداخلية (تفتح لما تدوس على زر) -->
-    <div id="screen-view" class="hidden"></div>
 
     <script src="app.js"></script>
 </body>

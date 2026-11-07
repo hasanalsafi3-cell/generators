@@ -195,6 +195,11 @@
         var currentUser = null;
         var isLoginMode = true;
         var isCollector = false;
+        
+        // متغيرات التقارير
+        var reportPeriod = 'month';
+        var customFrom = '';
+        var customTo = '';
 
         // 1. التحقق من تسجيل الدخول
         async function checkAuth() {
@@ -483,7 +488,7 @@
             document.getElementById('qrModal').classList.remove('hidden');
         }
 
-        // 7. شاشة الفواتير الجديدة (الجدول + البطاقات)
+        // 7. شاشة الفواتير (الجدول + البطاقات)
         async function renderInvoicesScreen() {
             await loadData();
             var innerView = document.getElementById('inner-view');
@@ -516,7 +521,6 @@
                 html += '<button class="btn-save" style="background:#f59e0b; margin-top:10px;" onclick="generateInvoices()">⚡ توليد فواتير الشهر الآن</button>';
                 html += '</div>';
             } else {
-                // البطاقات العلوية الستة
                 html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:20px;">';
                 html += '<div class="stat-box" style="margin:0;"><h4>إجمالي الفواتير</h4><p>' + totalInvoices + '</p></div>';
                 html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #10b981;"><h4>مدفوعة</h4><p>' + paidInvoices + '</p></div>';
@@ -526,7 +530,6 @@
                 html += '<div class="stat-box" style="margin:0; background:#7f1d1d;"><h4 style="color:#fca5a5;">المستحقة</h4><p style="color:#f87171;">' + totalOutstanding.toLocaleString() + '</p></div>';
                 html += '</div>';
 
-                // جدول الفواتير
                 html += '<div style="background:#0f172a; border-radius:10px; overflow-x:auto;">';
                 html += '<table style="width:100%; border-collapse:collapse; text-align:right; font-size:13px;">';
                 html += '<tr style="background:#1e293b; color:#94a3b8;">';
@@ -609,7 +612,6 @@
         async function payInvoice(invoiceId, amount, subId) {
             if (!confirm('هل أنت متأكد من استلام مبلغ ' + Number(amount).toLocaleString() + ' د.ع؟')) return;
 
-            // 1. تحديث الفاتورة إلى مدفوعة
             var res = await supabase.from('invoices').update({
                 status: 'paid',
                 payment_date: new Date().toISOString(),
@@ -621,7 +623,6 @@
                 return;
             }
 
-            // 2. تسجيل الدفعة في جدول الدفعات (للإحصائيات)
             var currentMonth = DB.settings.current_month || 'الشهر الحالي';
             await supabase.from('payments').insert([{ 
                 sub_id: subId, 
@@ -667,16 +668,92 @@
             renderFuelScreen();
         }
 
+        // 9. شاشة التقارير الجديدة
         async function renderReportsScreen() {
             await loadData();
-            var totalIncome = 0; var totalExpense = 0;
-            for(var i=0; i<DB.payments.length; i++) totalIncome += Number(DB.payments[i].amount);
-            for(var j=0; j<DB.expenses.length; j++) totalExpense += Number(DB.expenses[j].amount);
+            
+            var now = new Date();
+            var start = new Date();
+            var end = new Date();
+            
+            if (reportPeriod === 'today') {
+                start.setHours(0,0,0,0);
+            } else if (reportPeriod === 'week') {
+                start.setDate(now.getDate() - 7);
+            } else if (reportPeriod === 'month') {
+                start = new Date(now.getFullYear(), now.getMonth(), 1);
+            } else if (reportPeriod === 'year') {
+                start = new Date(now.getFullYear(), 0, 1);
+            } else if (reportPeriod === 'custom') {
+                if (!customFrom || !customTo) {
+                    start = new Date(now.getFullYear(), now.getMonth(), 1);
+                } else {
+                    start = new Date(customFrom);
+                    end = new Date(customTo);
+                    end.setHours(23, 59, 59, 999);
+                }
+            }
+
+            var filteredPayments = DB.payments.filter(function(p) {
+                var d = new Date(p.date);
+                return d >= start && d <= end;
+            });
+            
+            var filteredExpenses = DB.expenses.filter(function(e) {
+                var d = new Date(e.date);
+                return d >= start && d <= end;
+            });
+
+            var totalIncome = 0;
+            var totalExpense = 0;
+            
+            for(var i=0; i<filteredPayments.length; i++) totalIncome += Number(filteredPayments[i].amount);
+            for(var j=0; j<filteredExpenses.length; j++) totalExpense += Number(filteredExpenses[j].amount);
+            
             var profit = totalIncome - totalExpense;
-            var html = '<div class="inner-screen"><h2>📈 التقارير</h2>';
-            html += '<div class="stat-box"><h4>إجمالي الإيرادات</h4><p style="color:#10b981;">' + totalIncome.toLocaleString() + '</p></div>';
-            html += '<div class="stat-box"><h4>إجمالي المصروفات</h4><p style="color:#ef4444;">' + totalExpense.toLocaleString() + '</p></div>';
-            html += '<div class="stat-box" style="border:1px solid #f59e0b;"><h4>صافي الربح</h4><p style="color:#f59e0b;">' + profit.toLocaleString() + '</p></div></div>';
+            var activeSubs = DB.subs.filter(function(s) { return s.status !== 'suspended'; }).length;
+
+            var html = '<div class="inner-screen"><h2>📈 التقارير والإحصائيات</h2>';
+            
+            html += '<div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">';
+            html += '<label style="color:#94a3b8; font-size:14px; width:100%;">📅 اختيار الفترة:</label>';
+            
+            html += '<select class="input-field" style="flex:1; min-width:150px; margin:0;" onchange="reportPeriod = this.value; renderReportsScreen();">';
+            html += '<option value="today"' + (reportPeriod==='today'?' selected':'') + '>اليوم</option>';
+            html += '<option value="week"' + (reportPeriod==='week'?' selected':'') + '>آخر 7 أيام</option>';
+            html += '<option value="month"' + (reportPeriod==='month'?' selected':'') + '>هذا الشهر</option>';
+            html += '<option value="year"' + (reportPeriod==='year'?' selected':'') + '>هذه السنة</option>';
+            html += '<option value="custom"' + (reportPeriod==='custom'?' selected':'') + '>فترة مخصصة</option>';
+            html += '</select>';
+            
+            if (reportPeriod === 'custom') {
+                html += '<input type="date" class="input-field" style="flex:1; min-width:120px; margin:0;" value="' + customFrom + '" onchange="customFrom = this.value; renderReportsScreen();">';
+                html += '<span style="color:#94a3b8;">إلى</span>';
+                html += '<input type="date" class="input-field" style="flex:1; min-width:120px; margin:0;" value="' + customTo + '" onchange="customTo = this.value; renderReportsScreen();">';
+            }
+            html += '</div>';
+
+            html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:20px;">';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #10b981;">';
+            html += '<h4>إجمالي الإيرادات 💰</h4><p style="color:#10b981;">' + totalIncome.toLocaleString() + '</p>';
+            html += '</div>';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #ef4444;">';
+            html += '<h4>إجمالي المصروفات 💸</h4><p style="color:#ef4444;">' + totalExpense.toLocaleString() + '</p>';
+            html += '</div>';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #f59e0b;">';
+            html += '<h4>صافي الربح 📈</h4><p style="color:' + (profit >= 0 ? '#10b981' : '#ef4444') + ';">' + profit.toLocaleString() + '</p>';
+            html += '</div>';
+            
+            html += '<div class="stat-box" style="margin:0; border-bottom:3px solid #3b82f6;">';
+            html += '<h4>المشتركين النشطين 👥</h4><p style="color:#3b82f6;">' + activeSubs + '</p>';
+            html += '</div>';
+
+            html += '</div>';
+            html += '</div>';
+
             document.getElementById('inner-view').innerHTML = html;
         }
 
@@ -743,7 +820,7 @@
             html += '<div class="stat-box" style="background:#0f172a; border:1px solid #f59e0b; margin-bottom:20px;">';
             html += '<h4>الشهر الحالي للفوترة</h4>';
             html += '<p style="color:#f59e0b;">' + (DB.settings.current_month || 'الشهر الحالي') + '</p>';
-            html += '<button class="btn-warning" style="width:100%; margin-top:10px;" onclick="startNewMonth()">🔄 بدء شهر جديد (ترحيل الديون)</button>';
+            html += '<button class="btn-warning" style="width:100%; margin-top:10px;" onclick="startNewMonth()">🔄 بدء شهر جديد (تصفير الفواتير)</button>';
             html += '</div>';
 
             html += '<div class="input-group"><label>اسم المولدة:</label><input type="text" id="inpGenName" class="input-field" value="' + (DB.settings.generator_name || '') + '"></div>';
@@ -910,7 +987,7 @@
             innerView.innerHTML = html;
         }
 
-        // 9. واجهة المواطن
+        // 10. واجهة المواطن
         async function renderCitizenInvoice() {
             var urlParams = new URLSearchParams(window.location.search);
             var citizenId = urlParams.get('citizen');

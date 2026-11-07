@@ -3,229 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مولدتي - النظام الشامل</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>منصة إدارة المولدات</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { background: #f4f7fb; padding-bottom: 80px; }
-        .hidden { display: none !important; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
-        .login-screen { text-align: center; padding: 50px 20px; }
-        .login-screen h1 { color: #0f172a; margin-bottom: 30px; }
-        .btn-role { width: 100%; padding: 15px; margin-bottom: 10px; border: none; border-radius: 10px; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn-owner { background: #f59e0b; }
-        .btn-citizen { background: #3b82f6; }
-        .btn-admin { background: #1e293b; }
+        body { 
+            background-color: #0b1120; 
+            color: #f8fafc; 
+            min-height: 100vh;
+            padding: 20px;
+            background-image: radial-gradient(circle at top right, #1e293b, #0b1120);
+        }
 
-        .header { background: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
-        .header h3 { color: #0f172a; }
-        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .content { padding: 15px; }
-        .card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        .btn-save { background: #10b981; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        .btn-red { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        /* الشريط العلوي */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .top-bar h1 { font-size: 24px; display: flex; align-items: center; gap: 10px; }
+        .user-info { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+
+        /* حاوية الأعمدة الثلاثة */
+        .dashboard-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* تصميم العمود العام */
+        .panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            width: 100%;
+            max-width: 380px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0,0,0,0.4);
+        }
+
+        /* ألوان الهيدر لكل عمود */
+        .panel.owner { border-top: 4px solid #f59e0b; }
+        .panel.admin { border-top: 4px solid #eab308; }
+        .panel.citizen { border-top: 4px solid #3b82f6; }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .panel-header h2 { font-size: 22px; }
+        .panel.owner .panel-header h2 { color: #f59e0b; }
+        .panel.admin .panel-header h2 { color: #eab308; }
+        .panel.citizen .panel-header h2 { color: #3b82f6; }
+
+        /* الكروت الداخلية (الأزرار) */
+        .card-item {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .card-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
         
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #ddd; }
-        .nav-btn { background: none; border: none; font-size: 12px; font-weight: bold; color: #64748b; cursor: pointer; }
-        .nav-btn.active { color: #f59e0b; }
-        .nav-btn span { display: block; font-size: 20px; margin-bottom: 5px; }
+        .card-text { text-align: right; width: 100%; }
+        .card-text h4 { font-size: 15px; margin-bottom: 4px; color: #e2e8f0; }
+        .card-text p { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 5px; }
+        
+        .card-icon { font-size: 24px; margin-right: 15px; }
+
+        /* شارات الحالة */
+        .badge-green { color: #10b981; font-weight: bold; font-size: 11px; }
+        .badge-red { color: #ef4444; font-weight: bold; font-size: 11px; }
+        .badge-gold { color: #eab308; font-weight: bold; font-size: 11px; }
+        .badge-blue { color: #3b82f6; font-weight: bold; font-size: 11px; }
+
+        /* أشرطة التقدم (للوقود والحمل) */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        .fill-gold { background: #eab308; width: 75%; }
+        .fill-green { background: #10b981; width: 68%; }
+
+        /* جرس الإشعارات */
+        .notif-wrapper { position: relative; }
+        .notif-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        /* تعديلات الموبايل */
+        @media (max-width: 768px) {
+            .dashboard-grid { flex-direction: column; align-items: center; }
+            .panel { max-width: 100%; }
+            .top-bar { flex-direction: column; gap: 10px; text-align: center; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="loginScreen" class="login-screen">
-        <h1>مرحباً بك 👋</h1>
-        <button class="btn-role btn-owner" onclick="login('owner')">⚡ صاحب المولد</button>
-        <button class="btn-role btn-citizen" onclick="login('citizen')">👤 المواطن</button>
-        <button class="btn-role btn-admin" onclick="login('admin')">👑 مدير المنصة</button>
+    <!-- الشريط العلوي -->
+    <div class="top-bar">
+        <h1>🔌 منصة إدارة المولدات</h1>
+        <div class="user-info">
+            <span>مرحباً، أحمد</span>
+            <span>👤</span>
+        </div>
     </div>
 
-    <div id="appScreen" class="hidden">
-        <div class="header">
-            <h3 id="pageTitle">الرئيسية</h3>
-            <button class="btn-logout" onclick="logout()">خروج</button>
+    <!-- الأعمدة الثلاثة -->
+    <div class="dashboard-grid">
+
+        <!-- 1. صاحب المولد -->
+        <div class="panel owner">
+            <div class="panel-header">
+                <h2>صاحب المولد ⚡</h2>
+            </div>
+            
+            <div class="card-item" onclick="alert('لوحة التحكم')">
+                <div class="card-text">
+                    <h4>لوحة التحكم الرئيسية</h4>
+                    <p><span class="badge-green">مفعل</span> | 225V | الحمل: 68%</p>
+                </div>
+                <div class="card-icon">📊</div>
+            </div>
+
+            <div class="card-item" onclick="alert('إدارة المشتركين')">
+                <div class="card-text">
+                    <h4>إدارة المشتركين</h4>
+                    <p>550 مشترك | إضافة مشترك</p>
+                </div>
+                <div class="card-icon">👥</div>
+            </div>
+
+            <div class="card-item" onclick="alert('إدارة المولد')">
+                <div class="card-text">
+                    <h4>إدارة المولد</h4>
+                    <p>الوقود: 75%</p>
+                    <div class="progress-bar"><div class="progress-fill fill-gold"></div></div>
+                    <p style="margin-top:5px;">ساعات التشغيل: 2150 س</p>
+                </div>
+                <div class="card-icon">⛽</div>
+            </div>
+
+            <div class="card-item" onclick="alert('سجل الصيانة')">
+                <div class="card-text">
+                    <h4>سجل الصيانة</h4>
+                    <p>آخر صيانة: 12/05/2024</p>
+                </div>
+                <div class="card-icon">🛠️</div>
+            </div>
+
+            <div class="card-item" onclick="alert('تسجيل الأعطال')">
+                <div class="card-text">
+                    <h4>تسجيل الأعطال</h4>
+                    <p>إبلاغ عن عطل</p>
+                </div>
+                <div class="card-icon">⚠️</div>
+            </div>
         </div>
-        
-        <div class="content" id="mainContent"></div>
-        <div class="bottom-nav" id="bottomNav"></div>
+
+        <!-- 2. مالك المنصة -->
+        <div class="panel admin">
+            <div class="panel-header">
+                <h2>مالك المنصة 👑</h2>
+            </div>
+            
+            <div class="card-item" onclick="alert('لوحة التحكم')">
+                <div class="card-text">
+                    <h4>لوحة التحكم الرئيسية</h4>
+                    <p>المولدات: 120 | المشتركين: 6500</p>
+                    <p class="badge-gold">الإيرادات: 15,200,000 د.ع</p>
+                </div>
+                <div class="card-icon">📈</div>
+            </div>
+
+            <div class="card-item" onclick="alert('إدارة أصحاب المولدات')">
+                <div class="card-text">
+                    <h4>إدارة أصحاب المولدات</h4>
+                    <p>قائمة أصحاب المولدات</p>
+                </div>
+                <div class="card-icon">🏭</div>
+            </div>
+
+            <div class="card-item" onclick="alert('إدارة المواطنين')">
+                <div class="card-text">
+                    <h4>إدارة المواطنين</h4>
+                    <p>قائمة المشتركين</p>
+                </div>
+                <div class="card-icon">👥</div>
+            </div>
+
+            <div class="card-item" onclick="alert('التقارير')">
+                <div class="card-text">
+                    <h4>التقارير والإحصائيات</h4>
+                    <p>تقارير الاستهلاك | تقارير الصيانة</p>
+                </div>
+                <div class="card-icon">📋</div>
+            </div>
+
+            <div class="card-item" onclick="alert('الإدارة المالية')">
+                <div class="card-text">
+                    <h4>الإدارة المالية والمدفوعات</h4>
+                    <p>تسوية الحسابات | الفواتير</p>
+                </div>
+                <div class="card-icon">💰</div>
+            </div>
+
+            <div class="card-item" onclick="alert('إعدادات المنصة')">
+                <div class="card-text">
+                    <h4>إعدادات المنصة والصلاحيات</h4>
+                </div>
+                <div class="card-icon">⚙️</div>
+            </div>
+        </div>
+
+        <!-- 3. المواطن -->
+        <div class="panel citizen">
+            <div class="panel-header">
+                <h2>المواطن 👤</h2>
+            </div>
+            
+            <div class="card-item" onclick="alert('الرئيسية')">
+                <div class="card-text">
+                    <h4>الرئيسية (حالة المولد والتجهيز)</h4>
+                    <p><span class="badge-green">✔️ يعمل</span> <span class="badge-red">✖️ متوقف</span></p>
+                    <p>ساعة: 5 ساعات | 1400h</p>
+                </div>
+                <div class="card-icon">🏠</div>
+            </div>
+
+            <div class="card-item" onclick="alert('الاشتراك والباقات')">
+                <div class="card-text">
+                    <h4>الاشتراك والباقات</h4>
+                    <p>بريميوم | تفاصيل الطاقة</p>
+                </div>
+                <div class="card-icon">💳</div>
+            </div>
+
+            <div class="card-item" onclick="alert('الفواتير')">
+                <div class="card-text">
+                    <h4>الفواتير والمدفوعات</h4>
+                    <p class="badge-blue">55,000 د.ع</p>
+                    <p>الدفع الإلكتروني</p>
+                </div>
+                <div class="card-icon">🧾</div>
+            </div>
+
+            <div class="card-item" onclick="alert('الشكاوى')">
+                <div class="card-text">
+                    <h4>الشكاوى والدعم</h4>
+                    <p>تقديم شكوى | مركز المساعدة</p>
+                </div>
+                <div class="card-icon">💬</div>
+            </div>
+
+            <div class="card-item" onclick="alert('الإشعارات')">
+                <div class="card-text">
+                    <h4>الإشعارات والتنبيهات</h4>
+                </div>
+                <div class="card-icon notif-wrapper">🔔<span class="notif-badge">3</span></div>
+            </div>
+
+            <div class="card-item" onclick="alert('الملف الشخصي')">
+                <div class="card-text">
+                    <h4>الملف الشخصي والإعدادات</h4>
+                </div>
+                <div class="card-icon">👤</div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-        var DB = { subs: [], payments: [], expenses: [] };
-        var currentRole = '';
-        var currentTab = 'home';
-
-        function login(role) {
-            currentRole = role;
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('appScreen').classList.remove('hidden');
-            currentTab = 'home';
-            renderNav();
-            renderContent();
-        }
-
-        function logout() { window.location.reload(); }
-
-        function navigate(tab) {
-            currentTab = tab;
-            renderNav();
-            renderContent();
-        }
-
-        function renderNav() {
-            var nav = document.getElementById('bottomNav');
-            var html = '';
-            if (currentRole === 'owner') {
-                html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>🏠</span>الرئيسية</button>';
-                html += '<button class="nav-btn" onclick="navigate(&quot;subs&quot;)"><span>👥</span>المشتركين</button>';
-                html += '<button class="nav-btn" onclick="navigate(&quot;collect&quot;)"><span>💵</span>التحصيل</button>';
-                html += '<button class="nav-btn" onclick="navigate(&quot;expenses&quot;)"><span>🧾</span>المصاريف</button>';
-            } else if (currentRole === 'citizen') {
-                html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>⚡</span>المولدة</button>';
-                html += '<button class="nav-btn" onclick="navigate(&quot;invoice&quot;)"><span>🧾</span>فاتورتي</button>';
-            } else if (currentRole === 'admin') {
-                html += '<button class="nav-btn" onclick="navigate(&quot;home&quot;)"><span>📊</span>الإحصائيات</button>';
-            }
-            nav.innerHTML = html;
-        }
-
-        async function renderContent() {
-            var content = document.getElementById('mainContent');
-            var title = document.getElementById('pageTitle');
-            content.innerHTML = '<p style="text-align:center;">جاري التحميل...</p>';
-
-            try {
-                var resSubs = await supabase.from('subscribers').select('*');
-                var resPays = await supabase.from('payments').select('*');
-                var resExps = await supabase.from('expenses').select('*');
-                if (resSubs.data) DB.subs = resSubs.data;
-                if (resPays.data) DB.payments = resPays.data;
-                if (resExps.data) DB.expenses = resExps.data;
-            } catch(e) { console.log(e); }
-
-            var html = '';
-            var currentPrice = 5000; // سعر الأمبير (تقدر تغيره من الإعدادات لاحقاً)
-
-            if (currentRole === 'owner') {
-                // --- الرئيسية ---
-                if (currentTab === 'home') {
-                    title.innerText = 'لوحة التحكم';
-                    var totalCash = 0;
-                    for(var i=0; i<DB.payments.length; i++) { totalCash += Number(DB.payments[i].amount); }
-                    html += '<div class="card"><h3>إجمالي المحصل</h3><h1 style="color:#10b981;">' + totalCash.toLocaleString() + ' د.ع</h1></div>';
-                    html += '<div class="card"><h3>عدد المشتركين</h3><h1 style="color:#f59e0b;">' + DB.subs.length + '</h1></div>';
-                } 
-                // --- المشتركين ---
-                else if (currentTab === 'subs') {
-                    title.innerText = 'إدارة المشتركين';
-                    html += '<div class="card"><h3>إضافة مشترك جديد</h3>';
-                    html += '<input type="text" id="mName" class="input" placeholder="اسم المشترك">';
-                    html += '<input type="number" id="mAmps" class="input" value="5" placeholder="الأمبير">';
-                    html += '<button class="btn-save" onclick="saveSub()">حفظ المشترك</button></div>';
-
-                    html += '<div class="card"><h3>القائمة</h3>';
-                    for (var i = 0; i < DB.subs.length; i++) {
-                        var s = DB.subs[i];
-                        html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:10px 0;">';
-                        html += '<span><b>' + s.name + '</b> (' + s.amps + ' أمبير)</span>';
-                        html += '<button class="btn-red" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف</button>';
-                        html += '</div>';
-                    }
-                    html += '</div>';
-                }
-                // --- التحصيل ---
-                else if (currentTab === 'collect') {
-                    title.innerText = 'التحصيل';
-                    html += '<div class="card"><h3>سجل استلام الكاش</h3>';
-                    if(DB.subs.length === 0) html += '<p>أضف مشتركين أولاً.</p>';
-                    
-                    for (var i = 0; i < DB.subs.length; i++) {
-                        var s = DB.subs[i];
-                        var amount = s.amps * currentPrice;
-                        html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:10px 0;">';
-                        html += '<span><b>' + s.name + '</b><br><small style="color:#64748b;">' + amount.toLocaleString() + ' د.ع</small></span>';
-                        html += '<button class="btn-save" style="width:80px; padding:5px;" onclick="paySub(&quot;' + s.id + '&quot;, ' + amount + ')">استلمت</button>';
-                        html += '</div>';
-                    }
-                    html += '</div>';
-                }
-                // --- المصاريف ---
-                else if (currentTab === 'expenses') {
-                    title.innerText = 'المصاريف';
-                    html += '<div class="card"><h3>إضافة مصروف</h3>';
-                    html += '<input type="text" id="eType" class="input" placeholder="النوع (وقود، صيانة...)">';
-                    html += '<input type="number" id="eAmount" class="input" placeholder="المبلغ">';
-                    html += '<button class="btn-save" style="background:#ef4444;" onclick="saveExpense()">حفظ المصروف</button></div>';
-
-                    html += '<div class="card"><h3>السجل</h3>';
-                    for (var i = 0; i < DB.expenses.length; i++) {
-                        var e = DB.expenses[i];
-                        html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:10px 0;">';
-                        html += '<span><b>' + e.type + '</b></span>';
-                        html += '<span style="color:#ef4444;">' + Number(e.amount).toLocaleString() + ' د.ع</span>';
-                        html += '</div>';
-                    }
-                    html += '</div>';
-                }
-            } 
-            // --- المواطن ---
-            else if (currentRole === 'citizen') {
-                if (currentTab === 'home') {
-                    title.innerText = 'المولدة';
-                    html += '<div class="card" style="text-align:center;"><h1>⚡</h1><h3 style="color:#10b981;">المولدة شغالة الآن</h3></div>';
-                }
-                if (currentTab === 'invoice') {
-                    title.innerText = 'فاتورتي';
-                    html += '<div class="card" style="text-align:center;">';
-                    html += '<h3 style="color:#64748b;">المبلغ المطلوب</h3>';
-                    html += '<h1 style="color:#f59e0b; margin:10px 0;">25,000 د.ع</h1>';
-                    html += '<p style="color:#64748b; font-size:14px; margin-bottom:15px;">يرجى التحويل إلى سوبر كيو</p>';
-                    html += '<div style="background:#f0f2f5; padding:10px; border-radius:10px; margin-bottom:15px; font-weight:bold; letter-spacing:2px;">07701234567</div>';
-                    html += '<button class="btn-save" onclick="alert(&quot;تم نسخ الرقم!&quot;)">📋 انسخ الرقم</button>';
-                    html += '<button class="btn-save" style="background:#64748b; margin-top:10px;" onclick="alert(&quot;سيتم تاكيد الدفع من قبل الجابي&quot;)">✅ حوّلت المبلغ</button>';
-                    html += '</div>';
-                }
-            }
-            // --- مدير المنصة ---
-            else if (currentRole === 'admin') {
-                title.innerText = 'إحصائيات المنصة';
-                html += '<div class="card"><h3>إجمالي المولدات</h3><h1>1</h1></div>';
-                html += '<div class="card"><h3>إجمالي المشتركين (كل المولدات)</h3><h1>' + DB.subs.length + '</h1></div>';
-            }
-
-            content.innerHTML = html;
-        }
-
-        async function saveSub() {
-            var name = document.getElementById('mName').value;
-            var amps = document.getElementById('mAmps').value;
-            if (!name) return alert('اكتب الاسم');
-            await supabase.from('subscribers').insert([{ name: name, amps: amps, phone: '-' }]);
-            renderContent();
-        }
-
-        async function deleteSub(id) {
-            if (!confirm('تأكيد الحذف؟')) return;
-            await supabase.from('subscribers').delete().eq('id', id);
-            renderContent();
-        }
-
-        async function paySub(subId, amount) {
-            if (!confirm('تأكيد استلام المبلغ؟')) return;
-            await supabase.from('payments').insert([{ sub_id: subId, amount: amount, method: 'cash', status: 'paid' }]);
-            alert('✅ تم تسجيل الدفع بنجاح!');
-            renderContent();
-        }
-
-        async function saveExpense() {
-            var type = document.getElementById('eType').value;
-            var amount = document.getElementById('eAmount').value;
-            if (!type || !amount) return alert('اكتب التفاصيل');
-            await supabase.from('expenses').insert([{ type: type, amount: amount, note: '-' }]);
-            renderContent();
-        }
+        // هذا الكود بسيط جداً، فقط لضمان أن الأزرار تعمل بشكل تفاعلي عند الضغط عليها
+        console.log("تم تحميل واجهة المنصة بنجاح 100%");
     </script>
 </body>
 </html>

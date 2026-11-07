@@ -117,7 +117,7 @@
                 <div class="card-item" onclick="openScreen('owner-generator')"><div class="card-text"><h4>4. إدارة المولد</h4></div><div class="card-icon">⚙️</div></div>
                 <div class="card-item" onclick="openScreen('owner-fuel')"><div class="card-text"><h4>5. الوقود</h4></div><div class="card-icon">⛽</div></div>
                 <div class="card-item" onclick="openScreen('owner-reports')"><div class="card-text"><h4>6. التقارير</h4></div><div class="card-icon">📈</div></div>
-                <div class="card-item" onclick="openScreen('owner-messages')"><div class="card-text"><h4>7. الرسائل</h4></div><div class="card-icon">💬</div></div>
+                <div class="card-item" onclick="openScreen('owner-messages')"><div class="card-text"><h4>7. الرسائل والشكاوى</h4></div><div class="card-icon">💬</div></div>
                 <div class="card-item" onclick="openScreen('owner-settings')"><div class="card-text"><h4>8. الإعدادات</h4></div><div class="card-icon">⚙️</div></div>
             </div>
             <!-- مالك المنصة -->
@@ -146,9 +146,18 @@
         </div>
     </div>
 
+    <!-- نافذة سجل الدفعات (جديد) -->
+    <div id="historyModal" class="modal hidden">
+        <div class="modal-box" style="border-top-color:#10b981;">
+            <h3 style="color:#10b981; margin-bottom:15px;" id="historyTitle">سجل الدفعات</h3>
+            <div id="historyContent" style="max-height: 200px; overflow-y: auto; text-align:right;"></div>
+            <button onclick="document.getElementById('historyModal').classList.add('hidden')" class="btn-danger" style="width:100%; margin-top:15px;">إغلاق</button>
+        </div>
+    </div>
+
     <script>
         var supabase = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
-        var DB = { subs: [], payments: [], expenses: [], settings: { price_per_amp: 5000, status: true, is_active: true } };
+        var DB = { subs: [], payments: [], expenses: [], complaints: [], settings: { price_per_amp: 5000, status: true, is_active: true } };
         var currentUser = null;
         var isLoginMode = true;
 
@@ -212,10 +221,12 @@
             var resSubs = await supabase.from('subscribers').select('*').eq('user_id', currentUser.id);
             var resPays = await supabase.from('payments').select('*').eq('user_id', currentUser.id);
             var resExp = await supabase.from('expenses').select('*').eq('user_id', currentUser.id);
+            var resComp = await supabase.from('complaints').select('*').eq('user_id', currentUser.id); // شكاوى خاصة بهذا المالك
             
             if (resSubs.data) DB.subs = resSubs.data;
             if (resPays.data) DB.payments = resPays.data;
             if (resExp.data) DB.expenses = resExp.data;
+            if (resComp.data) DB.complaints = resComp.data;
         }
 
         function openScreen(screenName) {
@@ -246,7 +257,7 @@
         }
 
         // ==========================================
-        // 1. شاشات صاحب المولد (8 أقسام)
+        // 1. شاشات صاحب المولد
         // ==========================================
         async function renderOwnerHome() {
             await loadData();
@@ -273,6 +284,7 @@
             renderOwnerHome();
         }
 
+        // الميزة الجديدة: شريط البحث
         async function renderSubsScreen() {
             await loadData(); 
             var html = '<div class="inner-screen"><h2>👥 المشتركين</h2>';
@@ -282,18 +294,33 @@
             html += '<button class="btn-save" onclick="addNewSub()">➕ إضافة مشترك</button>';
             html += '</div>';
             
+            // شريط البحث الجديد
+            html += '<div class="input-group"><input type="text" id="searchBar" class="input-field" placeholder="🔍 بحث عن مشترك بالاسم..." oninput="filterSubs()"></div>';
+
             if (DB.subs.length === 0) html += '<p style="text-align:center; color:#64748b;">لا يوجد مشتركين حالياً.</p>';
 
+            html += '<div id="subs-list-container">';
             for (var i = 0; i < DB.subs.length; i++) {
                 var s = DB.subs[i];
-                html += '<div class="list-item"><div><b>' + s.name + '</b> (' + s.amps + ' أمبير)</div>';
+                html += '<div class="list-item sub-row" data-name="' + s.name + '"><div><b>' + s.name + '</b> (' + s.amps + ' أمبير)</div>';
                 html += '<div style="display:flex; gap:5px;">';
                 html += '<button class="btn-blue" onclick="showQRCode(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">QR / واتساب</button>';
                 html += '<button class="btn-danger" onclick="deleteSub(&quot;' + s.id + '&quot;)">حذف</button>';
                 html += '</div></div>';
             }
-            html += '</div>';
+            html += '</div></div>';
             document.getElementById('inner-view').innerHTML = html;
+        }
+
+        // دالة الفلترة للبحث
+        function filterSubs() {
+            var query = document.getElementById('searchBar').value.toLowerCase();
+            var rows = document.querySelectorAll('.sub-row');
+            for (var i = 0; i < rows.length; i++) {
+                var name = rows[i].getAttribute('data-name').toLowerCase();
+                if (name.includes(query)) rows[i].style.display = 'flex';
+                else rows[i].style.display = 'none';
+            }
         }
 
         async function addNewSub() {
@@ -321,6 +348,7 @@
             document.getElementById('qrModal').classList.remove('hidden');
         }
 
+        // الميزة الجديدة: سجل الدفعات
         async function renderInvoicesScreen() {
             await loadData();
             var price = DB.settings.price_per_amp;
@@ -334,17 +362,44 @@
                     if (DB.payments[j].sub_id === s.id) totalPaid += Number(DB.payments[j].amount);
                 }
                 var remaining = totalDue - totalPaid;
+                
                 html += '<div class="list-item" style="flex-direction:column; align-items:stretch;">';
                 html += '<div style="display:flex; justify-content:space-between; margin-bottom:10px;"><b>' + s.name + '</b> <span style="color:#94a3b8; font-size:13px;">الإجمالي: ' + totalDue.toLocaleString() + '</span></div>';
                 html += '<div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:10px;"><span style="color:#10b981;">المسدد: ' + totalPaid.toLocaleString() + '</span> <span style="color:#ef4444;">المتبقي: ' + remaining.toLocaleString() + '</span></div>';
-                html += '<div style="display:flex; gap:10px;">';
-                if (remaining > 0) html += '<button class="btn-save" style="margin:0; flex:1; font-size:14px;" onclick="payInstallment(&quot;' + s.id + '&quot;, ' + remaining + ')">استلم دفعة</button>';
-                else html += '<div style="flex:1; text-align:center; color:#10b981; font-weight:bold; padding-top:8px;">✅ مكتمل</div>';
-                if (totalPaid > 0) html += '<button class="btn-warning" style="flex:1; font-size:14px;" onclick="cancelLastPayment(&quot;' + s.id + '&quot;)">إلغاء آخر دفعة</button>';
+                
+                html += '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
+                if (remaining > 0) {
+                    html += '<button class="btn-save" style="margin:0; flex:1; font-size:14px;" onclick="payInstallment(&quot;' + s.id + '&quot;, ' + remaining + ')">استلم دفعة</button>';
+                } else {
+                    html += '<div style="flex:1; text-align:center; color:#10b981; font-weight:bold; padding-top:8px;">✅ مكتمل</div>';
+                }
+                // زر السجل الجديد
+                html += '<button class="btn-blue" style="font-size:14px;" onclick="showPaymentHistory(&quot;' + s.id + '&quot;, &quot;' + s.name + '&quot;)">📜 السجل</button>';
+
+                if (totalPaid > 0) {
+                    html += '<button class="btn-warning" style="flex:1; font-size:14px;" onclick="cancelLastPayment(&quot;' + s.id + '&quot;)">إلغاء آخر دفعة</button>';
+                }
                 html += '</div></div>';
             }
             html += '</div>';
             document.getElementById('inner-view').innerHTML = html;
+        }
+
+        // دالة عرض سجل الدفعات
+        function showPaymentHistory(subId, name) {
+            document.getElementById('historyTitle').innerText = 'سجل دفعات: ' + name;
+            var content = '';
+            var found = false;
+            for (var i = 0; i < DB.payments.length; i++) {
+                if (DB.payments[i].sub_id === subId) {
+                    found = true;
+                    var date = new Date(DB.payments[i].date).toLocaleDateString('ar-IQ');
+                    content += '<div class="list-item" style="padding:10px; font-size:14px;"><span>' + date + '</span><b style="color:#10b981;">' + Number(DB.payments[i].amount).toLocaleString() + ' د.ع</b></div>';
+                }
+            }
+            if (!found) content = '<p style="text-align:center; color:#64748b;">لا يوجد دفعات مسجلة.</p>';
+            document.getElementById('historyContent').innerHTML = content;
+            document.getElementById('historyModal').classList.remove('hidden');
         }
 
         async function payInstallment(subId, remaining) {
@@ -408,11 +463,33 @@
             document.getElementById('inner-view').innerHTML = html;
         }
 
+        // الميزة الجديدة: عرض الشكاوى الواردة
         function renderMessagesScreen() {
-            var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">💬 الرسائل</h2>';
-            html += '<div class="input-group"><textarea class="input-field" rows="4" placeholder="اكتب نص الإشعار هنا..."></textarea></div>';
-            html += '<button class="btn-save" onclick="alert(\'تم إرسال الإشعار بنجاح (محاكاة)\')">📤 إرسال</button></div>';
+            var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">💬 الرسائل والشكاوى</h2>';
+            html += '<div class="input-group"><textarea class="input-field" rows="3" placeholder="اكتب رسالة عامة..."></textarea></div>';
+            html += '<button class="btn-save" onclick="alert(\'تم إرسال الرسالة\')">📤 إرسال رسالة</button>';
+            
+            html += '<h3 style="margin-top:20px; margin-bottom:10px; color:#94a3b8;">📥 الشكاوى الواردة من المواطنين</h3>';
+            if(DB.complaints.length === 0) {
+                html += '<p style="text-align:center; color:#64748b;">لا يوجد شكاوى واردة.</p>';
+            } else {
+                for(var i=0; i<DB.complaints.length; i++) {
+                    var c = DB.complaints[i];
+                    var d = new Date(c.date).toLocaleDateString('ar-IQ');
+                    html += '<div class="list-item" style="flex-direction:column; align-items:stretch; border-right:4px solid #ef4444;">';
+                    html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b style="color:#3b82f6;">' + (c.citizen_name || 'مواطن') + '</b><span style="font-size:12px; color:#94a3b8;">' + d + '</span></div>';
+                    html += '<p style="font-size:14px; color:#e2e8f0;">' + c.text + '</p>';
+                    html += '<button class="btn-save" style="background:#10b981; margin-top:10px; padding:5px; font-size:12px;" onclick="resolveComplaint(&quot;' + c.id + '&quot;)">✅ تم الحل</button>';
+                    html += '</div>';
+                }
+            }
+            html += '</div>';
             document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function resolveComplaint(id) {
+            await supabase.from('complaints').delete().eq('id', id);
+            renderMessagesScreen();
         }
 
         async function renderSettingsScreen() {
@@ -430,7 +507,7 @@
         }
 
         // ==========================================
-        // 2. لوحة مالك المنصة (الشاملة والاحترافية)
+        // 2. لوحة مالك المنصة
         // ==========================================
         async function renderAdminHome() {
             var innerView = document.getElementById('inner-view');
@@ -463,7 +540,6 @@
 
             var html = '<div class="inner-screen" style="border-top-color:#eab308; max-width: 1000px;"><h2 style="color:#eab308;">👑 إدارة المنصة</h2>';
 
-            // 1. الأقسام الجانبية (الأزرار)
             html += '<div class="admin-sections">';
             html += '<button class="active">لوحة التحكم</button>';
             html += '<button onclick="alert(\'قائمة أصحاب المولدات\')">إدارة أصحاب المولدات</button>';
@@ -475,14 +551,12 @@
             html += '<button onclick="alert(\'الإعدادات\')">الإعدادات</button>';
             html += '</div>';
 
-            // 2. أزرار الإجراءات السريعة
             html += '<div class="admin-actions">';
             html += '<button style="background:#3b82f6;" onclick="alert(\'نموذج إضافة صاحب مولد\')">➕ إضافة صاحب مولد</button>';
             html += '<button style="background:#10b981;" onclick="alert(\'نموذج إضافة مولد جديد\')">➕ إضافة مولد جديد</button>';
             html += '<button style="background:#f59e0b;" onclick="alert(\'تم إرسال الإشعار الجماعي\')">📢 إرسال إشعار جماعي</button>';
             html += '</div>';
 
-            // 3. البطاقات العلوية
             html += '<div class="admin-grid">';
             html += '<div class="admin-card"><h4>إجمالي المولدات</h4><p>' + totalGens + '</p></div>';
             html += '<div class="admin-card"><h4>إجمالي المشتركين</h4><p>' + totalSubs + '</p></div>';
@@ -492,14 +566,12 @@
             html += '<div class="admin-card" style="border-top-color:#ef4444;"><h4>الشكاوى المفتوحة</h4><p style="color:#ef4444;">' + openComps + '</p></div>';
             html += '</div>';
 
-            // 4. نسبة النمو
             html += '<div style="background:#0f172a; padding:15px; border-radius:10px; margin-bottom:20px;">';
             html += '<h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">نسبة النمو (هذا الشهر)</h4>';
             html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;"><span>المشتركين</span><span style="color:#10b981;">+15% ↗</span></div>';
             html += '<div style="display:flex; justify-content:space-between; font-size:13px;"><span>الإيرادات</span><span style="color:#10b981;">+22% ↗</span></div>';
             html += '</div>';
 
-            // 5. الخريطة والرسوم البيانية
             html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:20px;">';
             html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">خريطة المولدات</h4>';
             html += '<div class="map-placeholder">🗺️ (خريطة توضيحية لمواقع المولدات)</div></div>';
@@ -514,7 +586,6 @@
             html += '</div></div>';
             html += '</div>';
 
-            // 6. آخر العمليات والشكاوى
             html += '<div style="display:flex; flex-wrap:wrap; gap:15px;">';
             html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">آخر عمليات الدفع</h4>';
             if(allPays.length === 0) html += '<p style="color:#64748b; font-size:13px;">لا يوجد دفعات.</p>';
@@ -531,14 +602,13 @@
                 }
             }
             html += '</div>';
-
             html += '</div>';
             html += '</div>';
             innerView.innerHTML = html;
         }
 
         // ==========================================
-        // 3. واجهة المواطن
+        // 3. واجهة المواطن (مع إضافة الشكاوى)
         // ==========================================
         async function renderCitizenInvoice() {
             var urlParams = new URLSearchParams(window.location.search);
@@ -574,8 +644,36 @@
             } else { 
                 html += '<p style="color:#10b981; font-weight:bold; font-size:20px; margin-top:15px;">✅ مسدد بالكامل</p>'; 
             }
-            html += '</div></div>';
+            html += '</div>';
+
+            // الميزة الجديدة: إرسال الشكوى
+            html += '<div class="stat-box" style="margin-top:20px; border-top:2px solid #ef4444;">';
+            html += '<h4 style="color:#ef4444;">تقديم شكوى</h4>';
+            html += '<textarea id="complaintText" class="input-field" rows="3" placeholder="اكتب شكواك هنا (مثلاً: المولدة مطفية منذ ساعتين)..."></textarea>';
+            html += '<button class="btn-save" style="background:#ef4444; margin-top:10px;" onclick="sendComplaint(&quot;' + citizen.id + '&quot;, &quot;' + citizen.user_id + '&quot;, &quot;' + citizen.name + '&quot;)">📢 إرسال الشكوى</button>';
+            html += '</div>';
+
+            html += '</div>';
             document.getElementById('inner-view').innerHTML = html;
+        }
+
+        // دالة إرسال الشكوى
+        async function sendComplaint(citizenId, userId, citizenName) {
+            var text = document.getElementById('complaintText').value;
+            if(!text) return alert('يرجى كتابة نص الشكوى أولاً.');
+            
+            var res = await supabase.from('complaints').insert([{ 
+                user_id: userId, 
+                citizen_name: citizenName, 
+                text: text, 
+                status: 'open' 
+            }]);
+            
+            if(res.error) alert('فشل إرسال الشكوى: ' + res.error.message);
+            else {
+                alert('✅ تم إرسال شكواك بنجاح، سيتم مراجعتها من قبل صاحب المولدة.');
+                document.getElementById('complaintText').value = '';
+            }
         }
 
         document.addEventListener('DOMContentLoaded', checkAuth);

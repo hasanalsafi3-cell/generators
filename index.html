@@ -744,6 +744,52 @@
             var type = document.getElementById('reqType').value; var details = document.getElementById('reqDetails').value; var reqAmps = document.getElementById('reqAmps') ? document.getElementById('reqAmps').value : null; if (!details) return alert('اكتب التفاصيل'); var finalText = details; if ((type === 'increase_amps' || type === 'decrease_amps') && reqAmps) finalText = 'طلب ' + (type === 'increase_amps' ? 'زيادة' : 'تقليل') + ' بمقدار ' + reqAmps + ' أمبير. التفاصيل: ' + details; var res = await supabase.from('complaints').insert([{ user_id: currentCitizen.user_id, citizen_name: currentCitizen.name, text: finalText, request_type: type, request_amount: reqAmps ? parseInt(reqAmps) : null, status: 'pending' }]); if (res.error) alert('فشل الإرسال: ' + res.error.message); else { alert('✅ تم إرسال الطلب بنجاح!'); await loadCitizenData(); switchCitizenTab('requests'); }
         }
 
+// دالة إضافة صاحب مولد جديد
+async function createNewOwner() {
+    var email = document.getElementById('newOwnerEmail').value.trim();
+    var password = document.getElementById('newOwnerPass').value.trim();
+    var genName = document.getElementById('newOwnerGenName').value.trim();
+    
+    if (!email || !password || !genName) return alert('أدخل جميع البيانات (الإيميل، الباسورد، اسم المولدة)');
+
+    // استخدام عميل مؤقت عشان ما يطرد المالك الحالي من حسابه
+    var tempClient = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+    
+    try {
+        // إنشاء حساب في Supabase Auth
+        var { data, error } = await tempClient.auth.signUp({ email: email, password: password });
+        
+        if (error) {
+            alert('فشل إنشاء الحساب: ' + error.message);
+        } else if (data.user) {
+            // إضافة بيانات المولدة في جدول الإعدادات مع جعل is_admin = false
+            var { error: insertError } = await supabase.from('settings').insert([{ 
+                id: Math.floor(Math.random() * 100000), 
+                user_id: data.user.id, 
+                email: email, 
+                generator_name: genName, 
+                price_per_amp: 5000, 
+                status: true, 
+                is_active: true, 
+                is_admin: false 
+            }]);
+            
+            if (insertError) {
+                alert('تم إنشاء الحساب، لكن فشل حفظ بيانات المولدة: ' + insertError.message);
+            } else {
+                alert('✅ تم إضافة صاحب المولدة بنجاح!');
+                document.getElementById('addOwnerModal').classList.add('hidden');
+                // تفريغ الخانات بعد الإضافة
+                document.getElementById('newOwnerEmail').value = '';
+                document.getElementById('newOwnerPass').value = '';
+                document.getElementById('newOwnerGenName').value = '';
+                renderAdminHome(); // تحديث الأرقام في لوحة المالك
+            }
+        }
+    } catch (err) {
+        alert('حدث خطأ غير متوقع: ' + err.message);
+    }
+}
         document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>

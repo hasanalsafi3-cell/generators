@@ -7,6 +7,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0b1120">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- خط Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
@@ -31,8 +32,6 @@
         .app-header .logo { font-size: 22px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 5px; }
         .app-header .logo span { color: #f59e0b; }
         .header-icons { display: flex; gap: 15px; align-items: center; }
-        .notif-btn { background: rgba(255,255,255,0.1); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; cursor: pointer; position: relative; }
-        .notif-badge { position: absolute; top: -2px; left: -2px; background: #ef4444; color: white; font-size: 10px; font-weight: bold; width: 18px; height: 18px; display: flex; justify-content: center; align-items: center; border-radius: 50%; border: 2px solid #0f172a; }
         .logout-btn { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
         .back-btn { background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
@@ -180,9 +179,13 @@
         <!-- لوحة صاحب المولد (تظهر فقط لصاحب المولد) -->
         <!-- ========================================== -->
         <div id="ownerDashboard" class="hidden">
-            <div class="hero-section">
-                <h1 id="ownerHeroTitle">مرحباً بك</h1>
-                <p>إدارة مولدك بكل سهولة</p>
+            <div class="hero-section" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h1 id="ownerHeroTitle">مرحباً بك</h1>
+                    <p>إدارة مولدك بكل سهولة</p>
+                </div>
+                <!-- زر تشغيل/إيقاف المولد -->
+                <button id="genToggleBtn" class="btn-save" style="width:auto; padding:10px 15px; margin:0; font-size:14px;" onclick="toggleGenerator()">جاري التحميل...</button>
             </div>
             <div class="content-padding">
                 <div class="stats-row">
@@ -349,7 +352,7 @@
             var urlParams = new URLSearchParams(window.location.search);
             var citizenId = urlParams.get('citizen');
             
-            // 1. دخول المواطن
+            // 1. دخول المواطن عبر الرابط
             if (citizenId) {
                 var res = await supabase.from('subscribers').select('*').eq('id', citizenId).single();
                 if (res.data) {
@@ -411,7 +414,7 @@
             isCollector = true;
             currentUser = { id: res.data.user_id };
             await showApp();
-            // إظهار واجهة صاحب المولدة (لأن الجابي يستخدم نفس الواجهة بس بشاشة الفواتير)
+            // إظهار واجهة صاحب المولدة (لأن الجابي يستخدم نفس الواجهة)
             document.getElementById('ownerDashboard').classList.remove('hidden');
             openScreen('owner-invoices');
         }
@@ -443,12 +446,14 @@
                 document.getElementById('ownerSubsCount').innerText = DB.subs.length;
                 var totalRev = DB.payments.reduce((sum, p) => sum + Number(p.amount), 0);
                 document.getElementById('ownerRevCount').innerText = totalRev.toLocaleString();
+                updateGenToggleUI(); // تحديث زر المولد
             }
         }
 
         async function loadData() {
             if(!currentUser) return;
             var resSet = await supabase.from('settings').select('*').eq('user_id', currentUser.id).maybeSingle();
+            
             if (resSet.data) {
                 DB.settings = resSet.data;
                 if (DB.settings.is_active === false) {
@@ -456,7 +461,27 @@
                     await logout();
                     return;
                 }
+            } else {
+                // إنشاء إعدادات افتراضية للحساب الجديد
+                var newSettings = { 
+                    id: Math.floor(Math.random() * 100000), 
+                    price_per_amp: 5000, 
+                    status: true, 
+                    is_active: true, 
+                    is_admin: false, 
+                    email: currentUser.email, 
+                    generator_name: 'مولد النور', 
+                    user_id: currentUser.id, 
+                    owner_phone: '07XXXXXXXXX', 
+                    work_hours: '6:00 ص - 12:00 م',
+                    current_month: 'الشهر الحالي',
+                    collector_pin: '1234',
+                    national_power_status: false
+                };
+                await supabase.from('settings').insert([newSettings]);
+                DB.settings = newSettings;
             }
+            
             var resSubs = await supabase.from('subscribers').select('*').eq('user_id', currentUser.id);
             var resPays = await supabase.from('payments').select('*').eq('user_id', currentUser.id);
             var resExp = await supabase.from('expenses').select('*').eq('user_id', currentUser.id);
@@ -470,6 +495,26 @@
             if (resComp.data) DB.complaints = resComp.data;
             if (resInv.data) DB.invoices = resInv.data;
             if (resNotif.data) DB.notifications = resNotif.data;
+        }
+
+        // --- دوال المولد ---
+        async function toggleGenerator() {
+            var newStatus = !DB.settings.status;
+            await supabase.from('settings').update({ status: newStatus }).eq('id', DB.settings.id);
+            DB.settings.status = newStatus;
+            updateGenToggleUI();
+        }
+
+        function updateGenToggleUI() {
+            var btn = document.getElementById('genToggleBtn');
+            if(!btn) return;
+            if(DB.settings.status) {
+                btn.innerHTML = '🔴 إيقاف المولد';
+                btn.style.background = '#ef4444';
+            } else {
+                btn.innerHTML = '⚡ تشغيل المولد';
+                btn.style.background = '#10b981';
+            }
         }
 
         // ==========================================
@@ -557,12 +602,10 @@
                 document.getElementById('adminDashboard').classList.remove('hidden');
             } else {
                 document.getElementById('ownerDashboard').classList.remove('hidden');
+                updateGenToggleUI(); // تحديث الزر عند الرجوع
             }
         }
 
-        // ... (باقي دوال صاحب المولدة: المشتركين، الفواتير، الوقود، إلخ - بدون أي تغيير عن الكود السابق) ...
-        // لضمان عدم إطالة الكود، سأضع هنا الدوال الأساسية فقط، لكن في الكود النهائي ستكون كاملة.
-        
         async function renderSubsScreen() {
             await loadData(); 
             var html = '<div class="inner-screen"><h2 style="color:#f59e0b; margin-bottom:20px; font-weight:800;">👥 المشتركين</h2><div class="form-card"><div class="input-group"><input type="text" id="inpSubNum" class="input-field" placeholder="رقم الاشتراك"></div><div class="input-group"><input type="text" id="inpName" class="input-field" placeholder="اسم المشترك"></div><div class="input-group"><input type="number" id="inpAmps" class="input-field" value="5" placeholder="الأمبير"></div><div class="input-group"><input type="text" id="inpPhone" class="input-field" placeholder="رقم الهاتف"></div><div class="input-group"><input type="text" id="inpAddress" class="input-field" placeholder="العنوان"></div><div class="input-group"><select id="inpStatus" class="input-field"><option value="active">نشط</option><option value="suspended">موقوف</option></select></div><button class="btn-save" onclick="addNewSub()">➕ إضافة مشترك</button></div>';
@@ -576,7 +619,6 @@
             html += '</div></div>'; document.getElementById('inner-view').innerHTML = html;
         }
 
-        // دوال مساعدة (addNewSub, deleteSub, etc.) - افترض أنها موجودة كما في الكود السابق
         function filterSubs() { var query = document.getElementById('searchBar').value.toLowerCase(); var rows = document.querySelectorAll('.sub-row'); for (var i = 0; i < rows.length; i++) { var name = rows[i].getAttribute('data-name').toLowerCase(); var num = rows[i].getAttribute('data-num').toLowerCase(); if (name.includes(query) || num.includes(query)) rows[i].style.display = 'flex'; else rows[i].style.display = 'none'; } }
         async function addNewSub() { var subNum = document.getElementById('inpSubNum').value, name = document.getElementById('inpName').value, amps = document.getElementById('inpAmps').value, phone = document.getElementById('inpPhone').value, address = document.getElementById('inpAddress').value, status = document.getElementById('inpStatus').value; if (!name || !amps) return alert('أدخل الاسم والأمبير'); var res = await supabase.from('subscribers').insert([{ sub_number: subNum, name: name, amps: parseInt(amps), phone: phone || '-', address: address || '-', status: status, user_id: currentUser.id, prev_debt: 0 }]); if (res.error) alert('فشل الحفظ: ' + res.error.message); else { alert('✅ تم الإضافة!'); renderSubsScreen(); } }
         function openEditSub(id, subNum, name, amps, phone, address, status) { document.getElementById('editSubId').value = id; document.getElementById('editSubNum').value = subNum; document.getElementById('editSubName').value = name; document.getElementById('editSubAmps').value = amps; document.getElementById('editSubPhone').value = phone; document.getElementById('editSubAddress').value = address; document.getElementById('editSubStatus').value = status; document.getElementById('editSubModal').classList.remove('hidden'); }
@@ -607,7 +649,6 @@
 
         async function payInvoice(invoiceId, amount, subId) { if (!confirm('استلام ' + Number(amount).toLocaleString() + ' د.ع؟')) return; var res = await supabase.from('invoices').update({ status: 'paid', payment_date: new Date().toISOString(), payment_method: 'cash' }).eq('id', invoiceId); if (res.error) return alert('خطأ: ' + res.error.message); await supabase.from('payments').insert([{ sub_id: subId, amount: amount, method: 'cash', status: 'paid', user_id: currentUser.id, billing_month: DB.settings.current_month || 'الشهر الحالي' }]); alert('✅ تم الدفع!'); await loadData(); renderInvoicesScreen(); }
 
-        // ... (باقي الدوال الأخرى مثل renderGeneratorScreen, renderFuelScreen, renderReportsScreen, renderSettingsScreen, renderMessagesScreen - سأضعها هنا مختصرة لتوفير المساحة، لكنها موجودة كاملة في الكود النهائي) ...
         async function renderGeneratorScreen() { await loadData(); var natPower = DB.settings.national_power_status; var natColor = natPower ? '#10b981' : '#ef4444'; var natText = natPower ? 'شغالة 💡' : 'مطفية 🔴'; var html = '<div class="inner-screen"><h2 style="color:#f59e0b; margin-bottom:20px; font-weight:800;">⚙️ إدارة المولد</h2><div class="stat-box"><h4>القدرة</h4><p>500 KVA</p></div><div class="stat-box"><h4>ساعات التشغيل</h4><p>2150 ساعة</p></div><div class="form-card" style="border:1px solid #334155;"><h4>الكهرباء الوطنية (للمواطن)</h4><p style="color:' + natColor + '; font-size:20px; margin:10px 0; font-weight:800;">' + natText + '</p><button class="btn-save" style="background:' + (natPower ? '#ef4444' : '#10b981') + ';" onclick="toggleNationalPower()">' + (natPower ? 'إعلان انقطاع' : 'إعلان رجوع') + '</button></div></div>'; document.getElementById('inner-view').innerHTML = html; }
         async function toggleNationalPower() { var newStatus = !DB.settings.national_power_status; await supabase.from('settings').update({ national_power_status: newStatus }).eq('id', DB.settings.id); DB.settings.national_power_status = newStatus; renderGeneratorScreen(); alert('✅ تم التحديث.'); }
         async function renderFuelScreen() { await loadData(); var html = '<div class="inner-screen"><h2 style="color:#a855f7; margin-bottom:20px; font-weight:800;">⛽ إدارة الوقود</h2><div class="form-card"><div class="input-group"><input type="number" id="fuelCost" class="input-field" placeholder="التكلفة (د.ع)"></div><button class="btn-save" style="background:#eab308;" onclick="addFuel()">➕ إضافة</button></div>'; for(var i=0; i<DB.expenses.length; i++) if(DB.expenses[i].type === 'وقود') html += '<div class="list-item"><b>تعبئة وقود</b><span style="color:#ef4444; font-weight:bold;">' + Number(DB.expenses[i].amount).toLocaleString() + ' د.ع</span></div>'; html += '</div>'; document.getElementById('inner-view').innerHTML = html; }

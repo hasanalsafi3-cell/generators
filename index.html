@@ -68,6 +68,10 @@
         .admin-sections { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; border-bottom: 1px solid #334155; }
         .admin-sections button { background: transparent; border: none; color: #94a3b8; font-size: 14px; font-weight: bold; cursor: pointer; white-space: nowrap; padding-bottom: 5px; }
         .admin-sections button.active { color: #eab308; border-bottom: 2px solid #eab308; }
+        .chart-container { display: flex; gap: 10px; align-items: flex-end; height: 120px; background: #0f172a; padding: 10px; border-radius: 10px; margin-bottom: 20px; }
+        .chart-bar { flex: 1; background: #3b82f6; border-radius: 4px 4px 0 0; position: relative; min-width: 20px; }
+        .chart-bar span { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #94a3b8; }
+        .map-placeholder { background: #0f172a; height: 150px; border-radius: 10px; display: flex; justify-content: center; align-items: center; color: #64748b; margin-bottom: 20px; border: 1px dashed #334155; }
 
         /* شريط التنقل السفلي للمواطن */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid #334155; z-index: 100; }
@@ -131,7 +135,7 @@
             </div>
         </div>
 
-        <!-- منطقة المواطن -->
+        <!-- منطقة المواطن (تظهر فقط للمواطن) -->
         <div id="citizen-dashboard-view" class="hidden">
             <div id="citizen-content" style="padding-bottom: 70px;"></div>
         </div>
@@ -175,15 +179,6 @@
             <input type="hidden" id="editSubId">
             <button class="btn-save" style="margin-top:10px;" onclick="saveEditedSub()">حفظ</button>
             <button onclick="document.getElementById('editSubModal').classList.add('hidden')" class="btn-danger" style="width:100%;">إلغاء</button>
-        </div>
-    </div>
-
-    <!-- نافذة إشعارات صاحب المولدة -->
-    <div id="ownerNotifsModal" class="modal hidden">
-        <div class="modal-box" style="border-top-color:#3b82f6;">
-            <h3 style="color:#3b82f6; margin-bottom:15px;">🔔 الإشعارات</h3>
-            <div id="ownerNotifsList" style="max-height: 300px; overflow-y: auto; text-align:right;"></div>
-            <button onclick="document.getElementById('ownerNotifsModal').classList.add('hidden')" class="btn-danger" style="width:100%; margin-top:15px;">إغلاق</button>
         </div>
     </div>
 
@@ -245,13 +240,10 @@
                     document.getElementById('appScreen').classList.remove('hidden');
                     document.getElementById('mainTopBar').classList.add('hidden');
                     document.getElementById('dashboard-view').classList.add('hidden');
-                    
-                    // إظهار واجهة المواطن
                     document.getElementById('citizen-dashboard-view').classList.remove('hidden'); 
                     document.getElementById('citizenTopBar').classList.remove('hidden');
                     document.getElementById('citizenBottomNav').classList.remove('hidden');
                     document.getElementById('citizenNameDisplay').innerText = '👤 أهلاً، ' + currentCitizen.name;
-                    
                     await loadCitizenData();
                     switchCitizenTab('home');
                     return;
@@ -793,4 +785,149 @@
             var totalExpense = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
             var profit = totalIncome - totalExpense;
             var activeSubs = DB.subs.filter(s => s.status !== 'suspended').length;
-            var html = '<div class="inner-screen"><h2>📈 التقارير</h2><div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;"><label style="color:#94a3b8; font-size:14px; width:100%;">الفترة:</label><select class="input-field" style="flex:1; min-width:150px; margin:0;" onchange="reportPeriod = this.value; renderReportsScreen();"><option value="today">اليوم</option><option value="week">آخر 7 أيام</option><option value="month"' + (reportPeriod==='month'?' selected':'') + '>هذا الشهر</option
+            var html = '<div class="inner-screen"><h2>📈 التقارير</h2><div style="background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;"><label style="color:#94a3b8; font-size:14px; width:100%;">الفترة:</label><select class="input-field" style="flex:1; min-width:150px; margin:0;" onchange="reportPeriod = this.value; renderReportsScreen();"><option value="today">اليوم</option><option value="week">آخر 7 أيام</option><option value="month"' + (reportPeriod==='month'?' selected':'') + '>هذا الشهر</option><option value="year">هذه السنة</option><option value="custom">مخصص</option></select>';
+            if (reportPeriod === 'custom') html += '<input type="date" class="input-field" style="flex:1; margin:0;" value="' + customFrom + '" onchange="customFrom = this.value; renderReportsScreen();"><input type="date" class="input-field" style="flex:1; margin:0;" value="' + customTo + '" onchange="customTo = this.value; renderReportsScreen();">';
+            html += '</div><div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;"><div class="stat-box" style="margin:0; border-bottom:3px solid #10b981;"><h4>الإيرادات</h4><p style="color:#10b981;">' + totalIncome.toLocaleString() + '</p></div><div class="stat-box" style="margin:0; border-bottom:3px solid #ef4444;"><h4>المصروفات</h4><p style="color:#ef4444;">' + totalExpense.toLocaleString() + '</p></div><div class="stat-box" style="margin:0; border-bottom:3px solid #f59e0b;"><h4>الصافي</h4><p style="color:' + (profit >= 0 ? '#10b981' : '#ef4444') + ';">' + profit.toLocaleString() + '</p></div><div class="stat-box" style="margin:0; border-bottom:3px solid #3b82f6;"><h4>المشتركين</h4><p style="color:#3b82f6;">' + activeSubs + '</p></div></div></div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function renderMessagesScreen() {
+            await loadData();
+            var html = '<div class="inner-screen" style="border-top-color:#3b82f6;"><h2 style="color:#3b82f6;">💬 الطلبات</h2>';
+            if(DB.complaints.length === 0) html += '<p style="text-align:center; color:#64748b;">لا يوجد طلبات.</p>';
+            else {
+                for(var i=0; i<DB.complaints.length; i++) {
+                    var c = DB.complaints[i];
+                    var d = new Date(c.date).toLocaleDateString('ar-IQ');
+                    var statusColor = c.status === 'pending' ? '#f59e0b' : (c.status === 'approved' ? '#10b981' : '#ef4444');
+                    var statusText = c.status === 'pending' ? 'قيد الانتظار' : (c.status === 'approved' ? 'موافق' : 'مرفوض');
+                    var typeText = c.request_type === 'complaint' ? 'شكوى' : (c.request_type === 'increase_amps' ? 'زيادة أمبير' : (c.request_type === 'decrease_amps' ? 'تقليل أمبير' : 'صيانة'));
+                    html += '<div class="list-item" style="flex-direction:column; align-items:stretch; border-right:4px solid ' + statusColor + ';">';
+                    html += '<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><b style="color:#3b82f6;">' + (c.citizen_name || 'مواطن') + ' (' + typeText + ')</b><span style="font-size:12px; color:#94a3b8;">' + d + '</span></div>';
+                    html += '<p style="font-size:14px; color:#e2e8f0;">' + c.text + '</p>';
+                    if (c.status === 'pending') html += '<div style="display:flex; gap:10px; margin-top:10px;"><button class="btn-save" style="background:#10b981; flex:1;" onclick="updateRequestStatus(&quot;' + c.id + '&quot;, &quot;approved&quot;)">موافقة</button><button class="btn-save" style="background:#ef4444; flex:1;" onclick="updateRequestStatus(&quot;' + c.id + '&quot;, &quot;rejected&quot;)">رفض</button></div>';
+                    else html += '<div style="text-align:left; margin-top:10px;"><span style="color:' + statusColor + '; font-size:12px; font-weight:bold;">' + statusText + '</span></div>';
+                    html += '</div>';
+                }
+            }
+            html += '</div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function updateRequestStatus(id, newStatus) {
+            await supabase.from('complaints').update({ status: newStatus }).eq('id', id);
+            alert('✅ تم التحديث.');
+            renderMessagesScreen();
+        }
+
+        async function renderSettingsScreen() {
+            var html = '<div class="inner-screen"><h2>⚙️ الإعدادات</h2>';
+            html += '<div class="stat-box" style="background:#0f172a; border:1px solid #f59e0b; margin-bottom:20px;"><h4>شهر الفوترة</h4><p style="color:#f59e0b;">' + (DB.settings.current_month || 'الشهر الحالي') + '</p><button class="btn-warning" style="width:100%; margin-top:10px;" onclick="startNewMonth()">🔄 بدء شهر جديد</button></div>';
+            html += '<div class="input-group"><label>اسم المولدة:</label><input type="text" id="inpGenName" class="input-field" value="' + (DB.settings.generator_name || '') + '"></div>';
+            html += '<div class="input-group"><label>الهاتف:</label><input type="text" id="inpOwnerPhone" class="input-field" value="' + (DB.settings.owner_phone || '') + '"></div>';
+            html += '<div class="input-group"><label>أوقات العمل:</label><input type="text" id="inpWorkHours" class="input-field" value="' + (DB.settings.work_hours || '') + '"></div>';
+            html += '<div class="input-group"><label>سعر الأمبير:</label><input type="number" id="inpPrice" class="input-field" value="' + DB.settings.price_per_amp + '"></div>';
+            html += '<div class="input-group"><label>رمز الجابي:</label><input type="text" id="inpPin" class="input-field" value="' + (DB.settings.collector_pin || '1234') + '"></div>';
+            html += '<button class="btn-save" onclick="saveSettings()">حفظ الإعدادات</button></div>';
+            document.getElementById('inner-view').innerHTML = html;
+        }
+
+        async function saveSettings() {
+            var newName = document.getElementById('inpGenName').value;
+            var newPhone = document.getElementById('inpOwnerPhone').value;
+            var newHours = document.getElementById('inpWorkHours').value;
+            var newPrice = document.getElementById('inpPrice').value;
+            var newPin = document.getElementById('inpPin').value;
+            await supabase.from('settings').update({ generator_name: newName, owner_phone: newPhone, work_hours: newHours, price_per_amp: newPrice, collector_pin: newPin }).eq('id', DB.settings.id);
+            DB.settings.generator_name = newName; DB.settings.owner_phone = newPhone; DB.settings.work_hours = newHours; DB.settings.price_per_amp = newPrice; DB.settings.collector_pin = newPin;
+            alert('✅ تم الحفظ');
+        }
+
+        async function startNewMonth() {
+            var newMonth = prompt("اسم الشهر الجديد:");
+            if (!newMonth) return;
+            var oldMonth = DB.settings.current_month || 'الشهر الحالي';
+            for (var i = 0; i < DB.subs.length; i++) {
+                var s = DB.subs[i];
+                if(s.status === 'suspended') continue;
+                var unpaidAmount = DB.invoices.filter(inv => inv.sub_id === s.id && inv.month === oldMonth && inv.status !== 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
+                if (unpaidAmount > 0) await supabase.from('subscribers').update({ prev_debt: Number(s.prev_debt || 0) + unpaidAmount }).eq('id', s.id);
+            }
+            await supabase.from('settings').update({ current_month: newMonth }).eq('id', DB.settings.id);
+            DB.settings.current_month = newMonth;
+            alert('✅ تم بدء شهر جديد وترحيل الديون.');
+            await loadData(); renderSettingsScreen();
+        }
+
+        async function renderAdminHome() {
+            var innerView = document.getElementById('inner-view');
+            var resSettings = await supabase.from('settings').select('*');
+            var resSubs = await supabase.from('subscribers').select('*');
+            var resPays = await supabase.from('payments').select('*');
+            var resComp = await supabase.from('complaints').select('*');
+            var allGens = resSettings.data || [], allSubs = resSubs.data || [], allPays = resPays.data || [], allComps = resComp.data || [];
+            var stats = DB.platformStats; 
+
+            var totalGens = allGens.length, totalSubs = allSubs.length, activeGens = 0, inactiveGens = 0;
+            for(var i=0; i<allGens.length; i++) { if(allGens[i].is_active !== false) activeGens++; else inactiveGens++; }
+            var totalRevenue = allPays.reduce((sum, p) => sum + Number(p.amount), 0);
+            var openComps = allComps.filter(c => c.status === 'open').length;
+
+            var html = '<div class="inner-screen" style="border-top-color:#eab308; max-width: 1000px;"><h2 style="color:#eab308;">👑 إدارة المنصة</h2>';
+            html += '<div class="admin-sections"><button class="active">لوحة التحكم</button><button onclick="alert(\'قريباً\')">إدارة أصحاب المولدات</button><button onclick="alert(\'قريباً\')">إدارة المشتركين</button><button onclick="alert(\'قريباً\')">الطلبات الجديدة</button><button onclick="alert(\'قريباً\')">التقارير</button><button onclick="alert(\'قريباً\')">المالية</button><button onclick="alert(\'قريباً\')">الإشعارات</button><button onclick="alert(\'قريباً\')">الإعدادات</button></div>';
+            html += '<div class="admin-actions">';
+            html += '<button style="background:#3b82f6;" onclick="document.getElementById(\'addOwnerModal\').classList.remove(\'hidden\')">➕ إضافة صاحب مولد</button>';
+            html += '<button style="background:#10b981;" onclick="alert(\'قريباً\')">➕ إضافة مولد جديد</button>';
+            html += '<button style="background:#eab308;" onclick="document.getElementById(\'sendNotifModal\').classList.remove(\'hidden\')">📢 إرسال إشعار</button>';
+            html += '</div>';
+
+            html += '<div class="admin-grid"><div class="admin-card"><h4>إجمالي المولدات</h4><p>' + totalGens + '</p></div><div class="admin-card"><h4>إجمالي المشتركين</h4><p>' + totalSubs + '</p></div><div class="admin-card" style="border-top-color:#10b981;"><h4>المولدات العاملة</h4><p style="color:#10b981;">' + activeGens + '</p></div><div class="admin-card" style="border-top-color:#ef4444;"><h4>المولدات المتوقفة</h4><p style="color:#ef4444;">' + inactiveGens + '</p></div><div class="admin-card"><h4>الإيرادات الشهرية</h4><p>' + totalRevenue.toLocaleString() + '</p></div><div class="admin-card" style="border-top-color:#ef4444;"><h4>الشكاوى المفتوحة</h4><p style="color:#ef4444;">' + openComps + '</p></div></div>';
+            
+            html += '<div style="background:#0f172a; padding:15px; border-radius:10px; margin-bottom:20px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">نسبة النمو (هذا الشهر)</h4><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:13px;"><span>المشتركين</span><span style="color:#10b981;">' + stats.growth_subs + ' ↗</span></div><div style="display:flex; justify-content:space-between; font-size:13px;"><span>الإيرادات</span><span style="color:#10b981;">' + stats.growth_rev + ' ↗</span></div></div>';
+
+            html += '<div style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:20px;"><div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">خريطة المولدات</h4><div class="map-placeholder">' + stats.map_note + '</div></div>';
+            var chartData = (stats.chart_data || '30,50,40,70,85,100').split(',');
+            html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">إحصائيات الإيرادات (آخر 6 أشهر)</h4><div class="chart-container">';
+            html += '<div class="chart-bar" style="height:' + chartData[0] + '%;"><span>1</span></div><div class="chart-bar" style="height:' + chartData[1] + '%;"><span>2</span></div><div class="chart-bar" style="height:' + chartData[2] + '%;"><span>3</span></div><div class="chart-bar" style="height:' + chartData[3] + '%;"><span>4</span></div><div class="chart-bar" style="height:' + chartData[4] + '%;"><span>5</span></div><div class="chart-bar" style="height:' + chartData[5] + '%; background:#10b981;"><span>6</span></div></div></div></div>';
+            
+            html += '<div style="display:flex; flex-wrap:wrap; gap:15px;"><div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">آخر عمليات الدفع</h4>';
+            if(allPays.length === 0) html += '<p style="color:#64748b; font-size:13px;">لا يوجد دفعات.</p>';
+            for(var p=Math.max(0, allPays.length-3); p<allPays.length; p++) html += '<div class="list-item" style="padding:10px;"><span>دفعة جديدة</span><b style="color:#10b981;">' + Number(allPays[p].amount).toLocaleString() + ' د.ع</b></div>';
+            html += '</div>';
+            html += '<div style="flex:1; min-width:280px;"><h4 style="color:#94a3b8; margin-bottom:10px; font-size:14px;">آخر الشكاوى</h4>';
+            if(allComps.length === 0) html += '<div class="list-item" style="padding:10px;"><span style="color:#64748b;">لا توجد شكاوى حديثة</span><span style="color:#10b981;">-</span></div>';
+            else for(var c=Math.max(0, allComps.length-3); c<allComps.length; c++) html += '<div class="list-item" style="padding:10px;"><span>' + allComps[c].text + '</span><span style="color:' + (allComps[c].status === 'open' ? '#ef4444' : '#10b981') + ';">' + (allComps[c].status === 'open' ? 'مفتوحة' : 'مغلقة') + '</span></div>';
+            html += '</div></div></div>';
+            innerView.innerHTML = html;
+        }
+
+        async function createNewOwner() {
+            var email = document.getElementById('newOwnerEmail').value;
+            var password = document.getElementById('newOwnerPass').value;
+            var genName = document.getElementById('newOwnerGenName').value;
+            if (!email || !password || !genName) return alert('أدخل جميع البيانات');
+            var tempClient = window.supabase.createClient('https://mbukheyuiuiadjkchhrs.supabase.co', 'sb_publishable_eElmjfXNtwo8sauLjU3yEw_Bc4h9MPQ');
+            var { data, error } = await tempClient.auth.signUp({ email: email, password: password });
+            if (error) alert('فشل: ' + error.message);
+            else if (data.user) {
+                await supabase.from('settings').insert([{ id: Math.floor(Math.random() * 100000), user_id: data.user.id, email: email, generator_name: genName, price_per_amp: 5000, status: true, is_active: true }]);
+                alert('✅ تم إنشاء الحساب!');
+                document.getElementById('addOwnerModal').classList.add('hidden');
+                renderAdminHome(); 
+            }
+        }
+
+        async function sendNotification() {
+            var target = document.getElementById('notifTarget').value;
+            var title = document.getElementById('notifTitle').value;
+            var message = document.getElementById('notifMessage').value;
+            if(!title || !message) return alert('اكتب العنوان والرسالة');
+            var res = await supabase.from('notifications').insert([{ title: title, message: message, target_role: target, sender_role: 'admin' }]);
+            if(res.error) alert('فشل: ' + res.error.message);
+            else { alert('✅ تم الإرسال!'); document.getElementById('notifTitle').value = ''; document.getElementById('notifMessage').value = ''; document.getElementById('sendNotifModal').classList.add('hidden'); }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>
